@@ -108,28 +108,21 @@ This is explicit negative evidence for the achievement path.
 
 ## Immediate next actions
 
-The serialized inspector now also performs the two final proof checks:
+The original Big Chomp acquisition question is now closed with explicit code + serialized-data evidence.
 
-- targeted ILSpy decompile of the `Rarity` enum from `Dew.Core.dll`, so serialized value `10` can be mapped explicitly;
-- incoming-reference tracing for the two `St_U_BigChomp` GameObjects and all attached components, including property paths and source object/script information where available, to detect any Hero-loadout reference.
+Next project work should shift from one-off Big Chomp investigation to reusable miner capability:
 
-Next:
-
-1. On Windows, run `update-windows.cmd`.
-2. Rerun `tools\inspect-big-chomp-serialized.cmd`.
-3. Upload:
-   - `data\extracted\big-chomp-serialized\summary.txt`
-4. Confirm the `Rarity` enum mapping for value `10`.
-5. Review incoming references for any HeroSkill/loadout property pointing at Big Chomp.
-6. If `10 == Rarity.Unique` and there is no Hero-loadout reference, close the acquisition chain:
-   - Big Chomp begins `NotDiscovered`, not achievement-locked;
-   - `NotDiscovered` counts as available in game;
-   - `excludeFromPool == false`;
-   - `isCharacterSkill == false` because rarity is not Character;
-   - Big Chomp enters `poolSkillsByRarity[Unique]`;
-   - normal rarity rolls never choose Unique;
-   - Shrine_Ascension explicitly maps Legendary -> Unique and selects from that pool;
-   - receiving the result calls `DiscoverSkill`, permanently completing discovery.
+1. Preserve the Big Chomp case as a worked example/regression fixture in project documentation.
+2. Generalize the current ad-hoc managed/serialized tracing helpers into reusable CLI/reporting commands where practical.
+3. Add a provenance-aware "how is this skill obtained?" report that can combine:
+   - profile unlock state;
+   - achievement mappings;
+   - Hero loadout membership;
+   - runtime loot-pool eligibility;
+   - rarity;
+   - special acquisition mechanisms such as Ascension;
+   - discovery call sites.
+4. Keep Big Chomp as the first end-to-end validation target for that generalized pipeline.
 
 ## Recovery instruction for a new ChatGPT session
 
@@ -451,3 +444,53 @@ Once `10` is mapped to its `Rarity` enum member:
 - `isCharacterSkill` follows directly from whether that enum member equals `Rarity.Character`.
 
 One final independent check should also verify that `St_U_BigChomp` is not referenced by any Hero loadout (`Dew.allHeroSkills` path), so the profile-state route is fully closed rather than inferred.
+
+
+## Big Chomp acquisition chain closed
+
+The final serialized-resource and enum checks are complete.
+
+Explicit serialized values for both `St_U_BigChomp` prefab copies:
+
+- `rarity = 10`
+- `excludeFromPool = 0`
+
+The decompiled `Rarity` enum maps:
+
+- Common = 0
+- Rare = 1
+- Epic = 2
+- Legendary = 3
+- Character = 4
+- Identity = 5
+- Unique = 10
+
+Therefore:
+
+- `St_U_BigChomp.rarity == Rarity.Unique`;
+- `excludeFromPool == false`;
+- `SkillTrigger.isCharacterSkill` is computed as `rarity == Rarity.Character`, so Big Chomp is **not** a character skill.
+
+The incoming-reference trace for both Big Chomp GameObjects/components shows only:
+- AssetBundle container/preload references;
+- their own GameObject/component/Transform relationships;
+- a child Transform relationship.
+
+No Hero/loadout reference was found in the analyzed Addressables bundle.
+
+Combined evidence now supports this acquisition path:
+
+1. Big Chomp has no direct `AchUnlockOnComplete` mapping.
+2. It has no Big-Chomp-specific unlock custom attribute.
+3. Normal non-hero/non-achievement skills are moved to `UnlockStatus.NotDiscovered`.
+4. `UnlockData.isAvailableInGame` is `status != Locked`; therefore `NotDiscovered` skills are already available for runtime item lists.
+5. `DewPlayer.GetLocalUnlockedGameItems()` includes skills that are available in-game, included in the build, not excluded from the pool, and not character skills.
+6. Big Chomp satisfies those pool-side serialized conditions: Unique / not excluded / not character.
+7. `LootManager` places eligible skills into `poolSkillsByRarity[skill.rarity]`.
+8. Normal rarity selection does not roll Unique.
+9. `Shrine_Ascension` explicitly maps Legendary -> Unique, chooses a random skill from `poolSkillsByRarity[Unique]`, creates/equips it, and for local players calls `DiscoverSkill(toType)`.
+10. `DiscoverSkill` transitions a `NotDiscovered` skill to `Complete`.
+
+Conclusion: **Big Chomp can be obtained/discovered by using a Shrine of Ascension on a Legendary memory and rolling Big Chomp from the eligible Unique skill pool.** The final selection is random among eligible Unique skills available from the players' combined unlocked-game-item set.
+
+Generic pickup/dismantle discovery still applies if Big Chomp is obtained through any other runtime source, but the Ascension shrine is the explicit code path identified for promoting Legendary -> Unique.
