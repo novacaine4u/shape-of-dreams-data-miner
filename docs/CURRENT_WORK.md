@@ -573,3 +573,21 @@ The LootManager serialized-field parser now matches exact dotted path segments f
 - `gemRarityChanceHigh`
 
 This prevents the normal field name from accidentally matching the High field name by substring.
+
+
+### Program Files (x86) CMD parsing fix
+
+The first run of `tools/build-game-data-dictionary.cmd` failed immediately after printing paths with:
+
+`\Steam\steamapps\common\Shape was unexpected at this time.`
+
+Root cause: CMD percent-expands variables for an entire parenthesized block before parsing it. The default game path contains `Program Files (x86)`; expanding `%BUNDLES%` inside an `if (...) (` block injected a literal `)` and terminated the block early.
+
+The wrapper now avoids parenthesized validation blocks and uses label-based guards instead. This makes the default Steam path safe without requiring the user to escape or alter it.
+
+Fix commit: `d845af9c8d053c1c908dcec643ffb269de84b36a`.
+
+Next action remains:
+1. run `update-windows.cmd`;
+2. rerun `tools\build-game-data-dictionary.cmd`;
+3. capture the printed dictionary summary.
