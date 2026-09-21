@@ -56,15 +56,15 @@ An achievement class in managed metadata may carry an `AchUnlockOnComplete` attr
 
 ## Current blocker
 
-`tools\decompile-managed.cmd` successfully restores ILSpy but whole-project decompilation of `Dew.Contents.dll` fails inside ILSpy 9.1 on unrelated method:
+Whole-project ILSpy decompilation remains unreliable because ILSpy 9.1 crashes on unrelated method:
 
 `Shrine_MorasDomain_HerPresence.SpawnRewards`
 
 Failure:
 
-`System.IndexOutOfRangeException` inside ILSpy ILReader / BitSet while decompiling that method.
+`System.IndexOutOfRangeException` inside ILSpy ILReader / BitSet.
 
-This is a decompiler failure, not evidence that the DLL itself is invalid.
+The metadata-scanner path works and is now preferred.
 
 ## Active implementation
 
@@ -86,14 +86,27 @@ The CMD wrapper builds the scanner with .NET 8 and scans `Dew.Contents.dll`, wri
 
 `data/extracted/managed-metadata/big-chomp-achievement-attributes.txt`
 
+## Latest managed-metadata result
+
+The first achievement-unlock metadata trace completed successfully.
+
+It found **94** `AchUnlockOnComplete` attribute instances in `Dew.Contents.dll`.
+
+Result for target `St_U_BigChomp`:
+
+- target matches: **0**
+- no achievement class has `AchUnlockOnComplete(typeof(St_U_BigChomp))`
+- therefore Big Chomp is **not** directly unlocked by the game's standard achievement→target attribute mapping
+
+This is explicit negative evidence for the achievement path.
+
 ## Immediate next actions
 
-1. On Windows, run `update-windows.cmd`.
-2. Run `tools\trace-big-chomp-unlock.cmd`.
-3. Upload or inspect `data\extracted\managed-metadata\big-chomp-achievement-attributes.txt`.
-4. If a class maps to `St_U_BigChomp`, inspect/decompile only that class and record the relationship as explicit evidence.
-5. If no achievement attribute targets Big Chomp, extend the metadata trace to Hero-based unlock relationships and `DewProfile.skills` initialization.
-6. Keep whole-project ILSpy decompilation as a secondary/fallback technique only; it currently fails on unrelated method `Shrine_MorasDomain_HerPresence.SpawnRewards`.
+1. Extend the metadata scanner to search **all custom attributes** for `St_U_BigChomp`, not just `AchUnlockOnComplete`.
+2. Search metadata/type relationships for hero-associated unlock structures that reference `St_U_BigChomp`.
+3. Add a targeted `DewProfile` / `UnlockData` inspection path that avoids whole-project decompilation.
+4. If Big Chomp has no Achievement/Hero association, determine whether its `UnlockData.status` defaults to `NotDiscovered` instead of `Locked`.
+5. Preserve any resulting owner/type/reference as explicit evidence.
 
 ## Recovery instruction for a new ChatGPT session
 
