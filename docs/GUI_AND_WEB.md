@@ -171,3 +171,45 @@ As new managed call-site research discovers additional variables, add them to th
 Never ask the player for an option merely because it might matter.
 
 A control should only become part of the normal GUI after game-data/code evidence demonstrates that it affects the selected acquisition mechanic. Unknown/unresolved mechanics should be labeled as such rather than represented by invented controls or assumptions.
+
+
+## Player-facing profile resolver
+
+The internal odds engine accepts exact item availability sets because that matches the game rule cleanly. The GUI must not expose that implementation detail as the primary workflow.
+
+The player-facing profile editor should collect recognizable progression facts and derive the contributed item set automatically.
+
+Planned profile inputs, only where proven relevant:
+
+- unlocked Heroes/Travelers;
+- completed/uncompleted achievements that gate content;
+- any explicit account/profile unlock choices discovered in game data;
+- party membership / which saved profiles are participating;
+- lobby bans;
+- active Hero's currently owned essence types for essence Ascension;
+- selected acquisition source/mechanism;
+- source-specific difficulty/rarity mode only after caller tracing proves the option changes normal vs High rarity selection.
+
+The resolver should then compute:
+
+    profile facts
+        -> profile-available game items
+        -> union across participating players
+        -> remove bans
+        -> apply mechanism-specific exclusions
+        -> calculate odds
+
+### Advanced override
+
+An Advanced mode may allow manual item-pool overrides for research/testing, but this should never be the default player experience.
+
+### Completeness indicator
+
+Every odds result should expose a context completeness state:
+
+- **Exact** — all proven variables for this acquisition path are supplied/resolved.
+- **Reference** — calculated from the release-wide content-eligible pool because player progression was not supplied.
+- **Partial** — one or more proven variables are missing.
+- **Unknown mechanic** — code/data still contains an unresolved factor.
+
+The GUI and website should never label a Reference or Partial result as an exact personal drop rate.
