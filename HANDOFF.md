@@ -126,6 +126,25 @@ It recursively searches JSON keys and string values and preserves:
 - matched text
 - containing top-level object key
 
+### Big Chomp structured-reference trace result
+
+The first exact structured JSON trace was completed against all of `RawData`.
+
+Searching for exact internal ID `St_U_BigChomp` returned 14 matches total:
+- 13 are the `St_U_BigChomp` key in localized `memories.json` files;
+- the only non-localization hit is `!ModResources/overrides/Skills/U_BigChomp/St_U_BigChomp.json` at JSON path `$[0]["target"]`, where the value is `St_U_BigChomp`.
+
+Searching for exact display name `Big Chomp` returned exactly one match:
+- `en-US/memories.json` at `$["St_U_BigChomp"]["name"]`.
+
+No exact `St_U_BigChomp` reference was found in stars, achievements, quests, or other structured JSON. Therefore the unlock relationship is not a simple direct reference by that exact ID in the exposed RawData JSON.
+
+Inspection also confirms the Big Chomp override directory contains:
+- `Skills/U_BigChomp/St_U_BigChomp.json`
+- `Skills/U_BigChomp/Ai_U_BigChomp.json`
+
+Next trace step: inspect both override files in full and run a broader non-exact search for `BigChomp` / `U_BigChomp` to capture related internal object names before moving to managed assemblies.
+
 Immediate next action after updating the Windows checkout:
 
     sodminer json-search "C:\Program Files (x86)\Steam\steamapps\common\Shape of Dreams\RawData" "St_U_BigChomp" --exact --output data\extracted\v1.4.0-big-chomp-json-refs.jsonl
