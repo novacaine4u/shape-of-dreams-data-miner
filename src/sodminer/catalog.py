@@ -570,7 +570,8 @@ def _extract_loot_manager_weights(
                     leaf = rarity.lower()
                     value = None
                     for path, candidate in fields.items():
-                        if prefix in path and path.endswith("." + leaf):
+                        segments = path.split(".")
+                        if prefix in segments and path.endswith("." + leaf):
                             value = candidate
                             break
                     if isinstance(value, (int, float)):
