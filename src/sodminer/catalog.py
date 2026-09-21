@@ -654,6 +654,37 @@ def build_data_dictionary(
         raw_records = _insert_rawdata(connection, release_id, rawdata_root)
         bundle_paths = _bundle_index(bundle_root)
 
+        all_unity_rows = analysis.execute(
+            """
+            SELECT id, object_id, archive, serialized_file, type, name, game_object, size
+            FROM object_view
+            ORDER BY id
+            """
+        ).fetchall()
+        connection.executemany(
+            """
+            INSERT INTO unity_objects(
+                release_id, analyzer_id, object_id, archive, serialized_file,
+                unity_type, name, game_object_analyzer_id, size
+            ) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            [
+                (
+                    release_id,
+                    int(item["id"]),
+                    int(item["object_id"]),
+                    item["archive"],
+                    str(item["serialized_file"]),
+                    str(item["type"]),
+                    item["name"],
+                    None if item["game_object"] in (None, "") else int(item["game_object"]),
+                    None if item["size"] is None else int(item["size"]),
+                )
+                for item in all_unity_rows
+            ],
+        )
+        unity_object_count = len(all_unity_rows)
+
         rows = analysis.execute(
             """
             SELECT id, object_id, archive, serialized_file, name
@@ -841,6 +872,7 @@ def build_data_dictionary(
         return {
             "output": str(output),
             "entities": int(entity_count),
+            "unity_objects": int(unity_object_count),
             "raw_records": int(raw_records),
             "serialized_items": int(serialized_items),
             "pool_members": int(pool_member_count),
