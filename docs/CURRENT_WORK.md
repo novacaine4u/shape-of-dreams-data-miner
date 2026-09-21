@@ -108,12 +108,32 @@ This is explicit negative evidence for the achievement path.
 
 ## Immediate next actions
 
-1. Add a targeted ILSpy helper that decompiles only `St_U_BigChomp`, `SkillTrigger`, and `DewProfile`; do not use whole-project `-p`.
-2. Run the helper on Windows after `update-windows.cmd`.
-3. Inspect `St_U_BigChomp` constructor/static initialization for any parent/category/resource association.
-4. Inspect `SkillTrigger` for fields/properties that participate in profile discovery/unlock state.
-5. Inspect `DewProfile` and nested `UnlockData` for how the `skills` dictionary is populated and how `Locked` vs `NotDiscovered` is assigned.
-6. Search targeted decompiled output for `St_U_BigChomp`, `UnlockStatus`, `NotDiscovered`, `Locked`, `skills`, and hero/achievement association logic.
+A targeted helper is now committed:
+
+`tools/decompile-big-chomp-targeted.cmd`
+
+It decompiles only:
+
+- `St_U_BigChomp`
+- `SkillTrigger`
+- `DewProfile`
+
+and writes focused output under:
+
+`data/extracted/managed-targeted/`
+
+Next:
+
+1. On Windows, run `update-windows.cmd`.
+2. Run `tools\decompile-big-chomp-targeted.cmd`.
+3. Upload:
+   - `data\extracted\managed-targeted\St_U_BigChomp.cs`
+   - `data\extracted\managed-targeted\SkillTrigger.cs`
+   - `data\extracted\managed-targeted\DewProfile.cs`
+   - `data\extracted\managed-targeted\big-chomp-targeted-unlock-trace.txt`
+4. Inspect `St_U_BigChomp` constructor/static initialization for any parent/category/resource association.
+5. Inspect `SkillTrigger` for fields/properties participating in profile discovery/unlock state.
+6. Inspect `DewProfile` and nested `UnlockData` for how `skills` is populated and how `Locked` vs `NotDiscovered` is assigned.
 7. Preserve any direct mapping or initialization rule as explicit evidence.
 
 ## Recovery instruction for a new ChatGPT session
