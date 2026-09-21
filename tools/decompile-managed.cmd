@@ -29,7 +29,7 @@ if not exist "%MANAGED%\Dew.Core.dll" (
 )
 
 echo [1/4] Restoring repo-local ILSpy command...
-dotnet tool restore
+dotnet tool restore --configfile "%CD%\NuGet.config"
 if errorlevel 1 exit /b 1
 
 if exist "%OUT%" rmdir /s /q "%OUT%"
