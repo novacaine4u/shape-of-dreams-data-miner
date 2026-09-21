@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "shape-of-dreams-data-miner"
+version = "0.1.0"
+description = "Provenance-aware data miner for Shape of Dreams game releases"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [{name = "novacaine4u"}]
+dependencies = []
+
+[project.scripts]
+sodminer = "sodminer.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
