@@ -17,17 +17,19 @@ The first acceptance test is the new **Big Chomp** memory from v1.4 / Starless P
 
 ## Status
 
-Early foundation. The read-only scanner, normalized evidence model, and installation inspector are implemented. The inspector identifies Unity version clues, Mono vs IL2CPP indicators, managed assemblies, RawData/mod resources, Unity resource files, localization candidates, and likely structured data files. The next stage is to run it against the current game build, then add raw-string and Unity-aware extraction based on the observed layout.
+Early foundation. The read-only scanner, normalized evidence model, installation inspector, and provenance-aware raw string extractor are implemented. The inspector identifies Unity version clues, Mono vs IL2CPP indicators, managed assemblies, RawData/mod resources, Unity resource files, localization candidates, and likely structured data files. The string extractor supports ASCII, UTF-8, and UTF-16LE with byte offsets and release provenance. The next stage is to run these tools against the current game build, then select the Unity-aware extraction path from the observed layout.
 
 ## Quick start
 
     python -m pip install -e .
 
-    sodminer inspect "C:/Program Files (x86)/Steam/steamapps/common/Shape of Dreams"
+    sodminer inspect "C:/Program Files (x86)/Steam/steamapps/common/Shape of Dreams" --output inspection.json
+
+    sodminer strings "C:/Program Files (x86)/Steam/steamapps/common/Shape of Dreams" --release v1.4.0 --contains "Big Chomp" --output data/extracted/v1.4.0-big-chomp-strings.jsonl
 
     sodminer scan "C:/Program Files (x86)/Steam/steamapps/common/Shape of Dreams" --release v1.4.0
 
-Use `--output inspection.json` with `sodminer inspect` to save the report instead of printing it. Both commands treat the game installation as read-only.
+The inspect, strings, and scan commands treat the game installation as read-only. String extraction can also target a single file when a narrower probe is preferable.
 
 ## Evidence model
 
