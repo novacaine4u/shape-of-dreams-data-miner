@@ -108,30 +108,26 @@ This is explicit negative evidence for the achievement path.
 
 ## Immediate next actions
 
-A serialized-resource locator is now committed:
-
-`tools/locate-big-chomp-resource.cmd`
+Serialized object inspection tooling is now committed.
 
 Next:
 
 1. On Windows, run `update-windows.cmd`.
-2. Run `tools\locate-big-chomp-resource.cmd`.
-3. Upload:
-   - `data\extracted\big-chomp-resource\st-u-bigchomp-strings.jsonl`
-   - `data\extracted\big-chomp-resource\bigchomp-strings.jsonl`
-4. Use the returned source file(s) and offsets to identify the exact serialized Unity asset/resource containing `St_U_BigChomp`.
-5. Inspect that serialized object read-only and extract:
+2. Run `tools\inspect-big-chomp-serialized.cmd`.
+3. The first run automatically downloads the official pinned UnityDataTool v2.2.0 Windows build into ignored `.tools/`.
+4. Upload:
+   - `data\extracted\big-chomp-serialized\summary.txt`
+5. If the summary exposes the Big Chomp component values, record:
    - `rarity`;
    - `isCharacterSkill`;
    - `excludeFromPool`.
-6. Do not infer these values from the `St_U_` naming convention or class defaults.
+6. If TypeTrees prevent readable object dumping, use the exact mapped object IDs/file names from the summary to add the smallest possible fallback parser step.
 7. If the values are Unique / false / false, record Ascension of a Legendary memory as an explicit acquisition path because:
    - NotDiscovered is available in-game;
    - the skill is admitted to `unlockedGameItems`;
    - LootManager admits it to `poolSkillsByRarity[Unique]`;
    - Shrine_Ascension explicitly rolls Legendary -> Unique;
    - Shrine_Ascension calls `DiscoverSkill` on the resulting skill.
-8. Preserve any other spawn/drop path discovered while inspecting the resource.
 
 ## Recovery instruction for a new ChatGPT session
 
@@ -331,3 +327,42 @@ For Big Chomp, the remaining unknowns are now strictly serialized resource value
 - `isCharacterSkill`
 
 The RawData override for `St_U_BigChomp` does not override those fields, and the managed class itself is empty, so those values must be obtained from the serialized Unity resource/prefab rather than inferred.
+
+
+## Serialized Big Chomp locator result
+
+The raw-string locator identified the following explicit asset locations for `St_U_BigChomp`:
+
+- `globalgamemanagers.assets`: offsets 244388 and 244428
+- `resources.assets`: eight direct `St_U_BigChomp` string occurrences, including:
+  - 250287384 (ASCII)
+  - 250567101 (UTF-16LE)
+  - 250585597 (UTF-16LE)
+  - 299465005 (assembly-qualified type string)
+  - 300395340 (UTF-16LE)
+  - 300445096 (UTF-16LE)
+  - 301204572 (UTF-16LE)
+  - 301296872 (UTF-16LE)
+- `StreamingAssets/aa/catalog.bin`: `St_U_BigChomp.prefab` at offset 652052
+- `StreamingAssets/aa/StandaloneWindows64/defaultlocalgroup_assets_all_f2387b6895a961fa06fa44f1fcd3ded5.bundle`: `St_U_BigChomp` at offset 29175738
+- `Managed/Dew.Contents.dll`: source/type-name strings only, already investigated
+
+This proves that Big Chomp has an Addressables prefab entry and serialized Unity asset presence.
+
+### Serialized object inspection tooling
+
+Added a pinned official UnityDataTool v2.2.0 workflow:
+
+- `tools/install-unitydatatool.cmd`
+- `tools/inspect_big_chomp_serialized.py`
+- `tools/inspect-big-chomp-serialized.cmd`
+
+The inspector:
+1. installs UnityDataTool v2.2.0 into ignored `.tools/`;
+2. inspects `resources.assets`;
+3. maps raw string offsets into serialized object ranges;
+4. dumps matching objects and follows local object references;
+5. extracts the main Addressables bundle and repeats the search there;
+6. reports focused lines containing `St_U_BigChomp`, `rarity`, `excludeFromPool`, or `isCharacterSkill`.
+
+UnityDataTool is read-only for these operations; game files are not modified.
