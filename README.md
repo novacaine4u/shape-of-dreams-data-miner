@@ -149,3 +149,12 @@ When RawData does not contain an explicit relationship, the repository includes 
     tools\decompile-managed.cmd
 
 It uses the repo-local `ilspycmd` tool manifest, decompiles `Dew.Contents.dll` and `Dew.Core.dll` into ignored `data/extracted/managed-decompile`, then searches the output for Big Chomp and achievement-unlock metadata. It requires `dotnet` 8 or newer on PATH. The pinned ILSpy version is 9.1.0.7988 so the helper remains compatible with .NET 8 rather than requiring the current .NET 10-only ILSpy releases.
+
+
+### Targeted Big Chomp unlock trace
+
+Whole-project decompilation is not required for the current unlock investigation. Use:
+
+    tools\decompile-big-chomp-targeted.cmd
+
+This decompiles only `St_U_BigChomp`, `SkillTrigger`, and `DewProfile`, then produces a focused unlock trace under `data/extracted/managed-targeted`. This avoids unrelated methods that can trigger ILSpy whole-project decompiler failures.
