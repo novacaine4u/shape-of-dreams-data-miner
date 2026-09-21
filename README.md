@@ -1,3 +1,122 @@
 # Shape of Dreams Data Miner
 
-Initial project scaffold for a provenance-aware Shape of Dreams release data miner.
+A reusable, provenance-aware data miner for **Shape of Dreams**.
+
+The first acceptance test is the new **Big Chomp** memory from v1.4 / Starless Path, but the architecture is intentionally broader: the goal is to turn each game release into a searchable dataset and eventually a browsable website.
+
+## Design goals
+
+- Scan a local game installation without modifying game files.
+- Extract structured entities from Unity assets, assemblies, localization, and supported raw sources.
+- Preserve evidence and provenance for every extracted fact.
+- Resolve relationships between memories, essences, travelers, identities, artifacts, stars, achievements, and unlock conditions.
+- Clearly distinguish explicit, inferred, and unknown information.
+- Store normalized data in SQLite and export JSON.
+- Compare releases so new and changed content can be identified after updates.
+- Provide a foundation for a searchable web UI.
+
+## Status
+
+Early foundation. The read-only scanner and normalized evidence model are implemented. The next stage adds Unity/assembly extraction and entity-specific extractors.
+
+## Quick start
+
+    python -m pip install -e .
+
+    sodminer scan "C:/Program Files (x86)/Steam/steamapps/common/Shape of Dreams" --release v1.4.0
+
+The scanner only reads the installation and writes manifests to the project output directory.
+
+## Evidence model
+
+Every extracted fact should carry:
+
+- source file or asset
+- release identifier
+- extraction method
+- confidence: explicit, inferred, or unknown
+- optional evidence text or identifier
+
+This is particularly important for unlock-condition research. A relationship inferred from nearby data must never be presented as a confirmed game rule.
+
+## Planned pipeline
+
+    Shape of Dreams installation
+              |
+              v
+         raw file scan
+              |
+        +-----+------+
+        |            |
+     Unity data   assemblies
+        |            |
+        +-----+------+
+              |
+              v
+       entity extraction
+              |
+              v
+      relationship resolver
+              |
+              v
+          SQLite/JSON
+          /          \
+         v            v
+    release diff   website/API
+
+## Target entity families
+
+- Memories
+- Essences
+- Travelers
+- Identity Memories
+- Artifacts
+- Way of Stars nodes
+- Achievements
+- Unlock conditions
+- Localization strings
+- Internal IDs and cross-references
+
+## Big Chomp acceptance test
+
+The first end-to-end research target is the v1.4 **Big Chomp** memory. The miner should eventually be able to answer:
+
+1. Does Big Chomp exist in the installed release data?
+2. What internal identifier represents it?
+3. Which asset/database entry defines it?
+4. Which display/localization string names it?
+5. What entities reference it?
+6. Is an unlock condition explicitly encoded?
+7. If the condition is inferred, what evidence supports the inference?
+8. What changed between releases?
+
+## Release snapshots
+
+Each analyzed release should be kept separately so the project can perform comparisons such as:
+
+    sodminer diff v1.3.x v1.4.0
+
+This makes future game updates useful rather than destructive: a new release becomes another evidence snapshot.
+
+## Repository structure
+
+    src/sodminer/
+      scanner.py
+      models.py
+      cli.py
+      extractors/
+      relationships/
+      output/
+
+    data/
+      raw/
+      extracted/
+      normalized/
+
+    releases/
+    website/
+    tools/
+
+## License
+
+MIT
