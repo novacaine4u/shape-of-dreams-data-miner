@@ -87,6 +87,23 @@ CREATE TABLE relationships (
     CHECK(target_entity_id IS NOT NULL OR target_external_id IS NOT NULL)
 );
 
+CREATE TABLE unity_objects (
+    id INTEGER PRIMARY KEY,
+    release_id INTEGER NOT NULL REFERENCES releases(id) ON DELETE CASCADE,
+    analyzer_id INTEGER NOT NULL,
+    object_id INTEGER NOT NULL,
+    archive TEXT,
+    serialized_file TEXT NOT NULL,
+    unity_type TEXT NOT NULL,
+    name TEXT,
+    game_object_analyzer_id INTEGER,
+    size INTEGER,
+    UNIQUE(release_id, analyzer_id)
+);
+
+CREATE INDEX idx_unity_objects_name ON unity_objects(release_id, name);
+CREATE INDEX idx_unity_objects_type ON unity_objects(release_id, unity_type);
+
 CREATE TABLE raw_records (
     id INTEGER PRIMARY KEY,
     release_id INTEGER NOT NULL REFERENCES releases(id) ON DELETE CASCADE,
