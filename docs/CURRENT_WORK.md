@@ -108,14 +108,13 @@ This is explicit negative evidence for the achievement path.
 
 ## Immediate next actions
 
-1. On Windows, run `update-windows.cmd`.
-2. Run `tools\trace-big-chomp-metadata-wide.cmd`.
-3. Upload or inspect `data\extracted\managed-metadata\big-chomp-wide-metadata.txt`.
-4. Use the reported full type name/base/interfaces plus any custom-attribute owner match to determine whether Big Chomp has a hero/content association.
-5. Add targeted ILSpy single-type decompilation using `-t|--type` for only the relevant type(s); avoid whole-project `-p`.
-6. Target `DewProfile` / `UnlockData` initialization next if metadata alone does not reveal the relationship.
-7. If Big Chomp has no Achievement/Hero association, determine whether its `UnlockData.status` defaults to `NotDiscovered` instead of `Locked`.
-8. Preserve any resulting owner/type/reference as explicit evidence.
+1. Add a targeted ILSpy helper that decompiles only `St_U_BigChomp`, `SkillTrigger`, and `DewProfile`; do not use whole-project `-p`.
+2. Run the helper on Windows after `update-windows.cmd`.
+3. Inspect `St_U_BigChomp` constructor/static initialization for any parent/category/resource association.
+4. Inspect `SkillTrigger` for fields/properties that participate in profile discovery/unlock state.
+5. Inspect `DewProfile` and nested `UnlockData` for how the `skills` dictionary is populated and how `Locked` vs `NotDiscovered` is assigned.
+6. Search targeted decompiled output for `St_U_BigChomp`, `UnlockStatus`, `NotDiscovered`, `Locked`, `skills`, and hero/achievement association logic.
+7. Preserve any direct mapping or initialization rule as explicit evidence.
 
 ## Recovery instruction for a new ChatGPT session
 
@@ -140,3 +139,24 @@ The first local build of the .NET metadata scanner created untracked:
 These are disposable build artifacts. They were added to `.gitignore` so future scanner runs will not make `update-windows.cmd` report a dirty working tree.
 
 If a Windows checkout was created before that ignore rule arrived, delete those two directories once, then rerun `update-windows.cmd`.
+
+
+## Wide Big Chomp metadata result
+
+The wide metadata trace completed against both `Dew.Contents.dll` and `Dew.Core.dll`.
+
+Explicit findings:
+
+- `St_U_BigChomp` is defined in `Dew.Contents.dll`.
+- Metadata token: `0x02000B83`.
+- Base type: `SkillTrigger`.
+- Interfaces: none.
+- Type-level custom attributes: none.
+- `Dew.Contents.dll` custom attributes scanned: 6,122.
+- `Dew.Contents.dll` custom-attribute blobs containing `St_U_BigChomp`: 0.
+- `Dew.Core.dll` custom attributes scanned: 5,354.
+- `Dew.Core.dll` contains no `St_U_BigChomp` type definition and no custom-attribute blob containing that name.
+
+Conclusion: Big Chomp is not wired to acquisition through managed custom-attribute metadata. Combined with the earlier 94-entry `AchUnlockOnComplete` scan, the standard achievement-attribute unlock path is ruled out.
+
+Next investigation layer: targeted single-type decompilation of `St_U_BigChomp`, `SkillTrigger`, and `DewProfile` (including nested `UnlockData`) to inspect constructors/static initialization/profile unlock-status assignment without invoking whole-project decompilation.
