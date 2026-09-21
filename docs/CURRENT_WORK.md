@@ -108,20 +108,30 @@ This is explicit negative evidence for the achievement path.
 
 ## Immediate next actions
 
-1. Locate which serialized Unity asset/resource file contains `St_U_BigChomp`.
-2. Use raw-string provenance first so the candidate file/path is explicit and reproducible.
-3. Inspect that serialized object read-only and extract:
+A serialized-resource locator is now committed:
+
+`tools/locate-big-chomp-resource.cmd`
+
+Next:
+
+1. On Windows, run `update-windows.cmd`.
+2. Run `tools\locate-big-chomp-resource.cmd`.
+3. Upload:
+   - `data\extracted\big-chomp-resource\st-u-bigchomp-strings.jsonl`
+   - `data\extracted\big-chomp-resource\bigchomp-strings.jsonl`
+4. Use the returned source file(s) and offsets to identify the exact serialized Unity asset/resource containing `St_U_BigChomp`.
+5. Inspect that serialized object read-only and extract:
    - `rarity`;
    - `isCharacterSkill`;
    - `excludeFromPool`.
-4. Do not infer these values from the `St_U_` naming convention or class defaults.
-5. If the values are Unique / false / false, record Ascension of a Legendary memory as an explicit acquisition path because:
+6. Do not infer these values from the `St_U_` naming convention or class defaults.
+7. If the values are Unique / false / false, record Ascension of a Legendary memory as an explicit acquisition path because:
    - NotDiscovered is available in-game;
    - the skill is admitted to `unlockedGameItems`;
    - LootManager admits it to `poolSkillsByRarity[Unique]`;
    - Shrine_Ascension explicitly rolls Legendary -> Unique;
    - Shrine_Ascension calls `DiscoverSkill` on the resulting skill.
-6. Preserve any other spawn/drop path discovered while inspecting the resource.
+8. Preserve any other spawn/drop path discovered while inspecting the resource.
 
 ## Recovery instruction for a new ChatGPT session
 
