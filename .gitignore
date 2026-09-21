@@ -21,3 +21,7 @@ tools/MetadataTrace/obj/
 
 tools/MethodCallTrace/bin/
 tools/MethodCallTrace/obj/
+
+
+# Repo-local downloaded analysis tools
+/.tools/
