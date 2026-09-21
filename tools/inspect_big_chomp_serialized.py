@@ -5,13 +5,13 @@ import json
 import mmap
 import re
 import shutil
+import sqlite3
 import subprocess
 from pathlib import Path
 
 
 TERM = "St_U_BigChomp"
 FIELD_TERMS = ("St_U_BigChomp", "rarity", "excludeFromPool", "isCharacterSkill")
-MAX_FOLLOW_OBJECTS = 40
 
 
 def run(cmd: list[str], *, stdout_path: Path | None = None) -> subprocess.CompletedProcess[str]:
@@ -80,63 +80,17 @@ def map_offsets(objects: list[dict], occurrences: list[tuple[int, str]]) -> list
     return matches
 
 
-def extract_local_path_ids(text: str) -> set[int]:
-    ids: set[int] = set()
-    lines = text.splitlines()
-    for index, line in enumerate(lines):
-        if "m_PathID" not in line:
-            continue
-        match = re.search(r"m_PathID[^-0-9]*(-?\d+)", line)
-        if match:
-            value = int(match.group(1))
-            if value != 0:
-                ids.add(value)
-    return ids
-
-
-def dump_object_graph(
-    tool: Path,
-    serialized_file: Path,
-    objects: list[dict],
-    seed_ids: list[int],
-    out_dir: Path,
-) -> list[Path]:
-    known_ids = {int(item["id"]) for item in objects if "id" in item}
-    queue = list(dict.fromkeys(seed_ids))
-    seen: set[int] = set()
-    dumps: list[Path] = []
-
-    while queue and len(seen) < MAX_FOLLOW_OBJECTS:
-        object_id = queue.pop(0)
-        if object_id in seen or object_id not in known_ids:
-            continue
-        seen.add(object_id)
-        safe_file = re.sub(r"[^A-Za-z0-9_.-]+", "_", serialized_file.name)
-        dump_path = out_dir / f"{safe_file}.object_{object_id}.txt"
-        result = run(
-            [str(tool), "dump", str(serialized_file), "--stdout", "-i", str(object_id)],
-            stdout_path=dump_path,
-        )
-        if result.returncode != 0:
-            continue
-        dumps.append(dump_path)
-        for ref_id in extract_local_path_ids(result.stdout):
-            if ref_id in known_ids and ref_id not in seen:
-                queue.append(ref_id)
-
-    return dumps
-
-
 def inspect_serialized_file(
     tool: Path,
     serialized_file: Path,
     out_dir: Path,
     report: list[str],
-) -> list[Path]:
+) -> None:
     occurrences = find_occurrences(serialized_file, TERM)
     if not occurrences:
-        return []
+        return
 
+    out_dir.mkdir(parents=True, exist_ok=True)
     report.append(f"FILE: {serialized_file}")
     for offset, encoding in occurrences:
         report.append(f"  TERM offset={offset} encoding={encoding}")
@@ -148,31 +102,191 @@ def inspect_serialized_file(
     if not objects:
         report.append("  Object list unavailable.")
         report.append("")
-        return []
+        return
 
     mapped = map_offsets(objects, occurrences)
-    seed_ids: list[int] = []
     for offset, encoding, item in mapped:
-        object_id = int(item["id"])
-        seed_ids.append(object_id)
         report.append(
             "  MAP "
             f"offset={offset} encoding={encoding} -> "
-            f"id={object_id} type={item.get('typeName')} "
+            f"id={item.get('id')} type={item.get('typeName')} "
             f"objectOffset={item.get('offset')} size={item.get('size')}"
         )
+    report.append("")
 
-    if not seed_ids:
-        report.append("  No term occurrence mapped into an object range.")
+
+def find_extracted_serialized_file(root: Path, name: str) -> Path | None:
+    matches = [p for p in root.rglob(name) if p.is_file()]
+    if not matches:
+        return None
+    return sorted(matches, key=lambda p: (len(p.parts), str(p)))[0]
+
+
+def dict_row(row: sqlite3.Row) -> dict[str, object]:
+    return {key: row[key] for key in row.keys()}
+
+
+def analyze_big_chomp_components(
+    tool: Path,
+    bundle: Path,
+    out_dir: Path,
+    report: list[str],
+) -> list[Path]:
+    report.append("=== AssetBundle analyzer component trace ===")
+
+    db_path = out_dir / "big-chomp-bundle-analysis.db"
+    analyze_log = out_dir / "bundle-analyze.txt"
+    result = run(
+        [str(tool), "analyze", str(bundle), "-o", str(db_path), "--skip-crc"],
+        stdout_path=analyze_log,
+    )
+    if result.returncode != 0 or not db_path.exists():
+        report.append("Bundle analyze failed; see bundle-analyze logs.")
         report.append("")
         return []
 
-    dump_dir = out_dir / "objects"
-    dump_dir.mkdir(parents=True, exist_ok=True)
-    dumps = dump_object_graph(tool, serialized_file, objects, seed_ids, dump_dir)
-    report.append(f"  Dumped object graph files: {len(dumps)}")
+    extracted = out_dir / "bundle-extracted"
+    extracted.mkdir(parents=True, exist_ok=True)
+    extract_result = run(
+        [str(tool), "archive", "extract", str(bundle), "-o", str(extracted)],
+        stdout_path=out_dir / "bundle-extract.txt",
+    )
+    if extract_result.returncode != 0:
+        report.append("Bundle extraction failed; see bundle-extract logs.")
+        report.append("")
+        return []
+
+    dumps_dir = out_dir / "component-dumps"
+    dumps_dir.mkdir(parents=True, exist_ok=True)
+    dump_paths: list[Path] = []
+
+    connection = sqlite3.connect(db_path)
+    connection.row_factory = sqlite3.Row
+    try:
+        game_objects = connection.execute(
+            """
+            SELECT *
+            FROM object_view
+            WHERE type = 'GameObject' AND name = ?
+            ORDER BY serialized_file, object_id
+            """,
+            (TERM,),
+        ).fetchall()
+
+        report.append(f"Named GameObjects found: {len(game_objects)}")
+
+        for index, game_object in enumerate(game_objects, start=1):
+            go = dict_row(game_object)
+            report.append(
+                f"GAMEOBJECT[{index}]: analyzer_id={go['id']} "
+                f"object_id={go['object_id']} serialized_file={go['serialized_file']} "
+                f"archive={go['archive']}"
+            )
+
+            components = connection.execute(
+                """
+                SELECT *
+                FROM object_view
+                WHERE game_object = ?
+                ORDER BY type, object_id
+                """,
+                (go["id"],),
+            ).fetchall()
+
+            report.append(f"  Components: {len(components)}")
+
+            for component in components:
+                comp = dict_row(component)
+                precise_script: dict[str, object] | None = None
+                try:
+                    script_row = connection.execute(
+                        "SELECT * FROM script_object_view WHERE id = ?",
+                        (comp["id"],),
+                    ).fetchone()
+                    if script_row is not None:
+                        precise_script = dict_row(script_row)
+                except sqlite3.DatabaseError:
+                    precise_script = None
+
+                script_bits = ""
+                if precise_script:
+                    interesting = []
+                    for key, value in precise_script.items():
+                        if key in {
+                            "namespace",
+                            "class",
+                            "class_name",
+                            "script",
+                            "script_name",
+                            "assembly",
+                            "assembly_name",
+                            "type_name",
+                            "full_name",
+                        } and value not in (None, ""):
+                            interesting.append(f"{key}={value}")
+                    if interesting:
+                        script_bits = " [" + ", ".join(interesting) + "]"
+
+                report.append(
+                    f"  COMPONENT analyzer_id={comp['id']} "
+                    f"object_id={comp['object_id']} type={comp['type']} "
+                    f"serialized_file={comp['serialized_file']}{script_bits}"
+                )
+
+                serialized_path = find_extracted_serialized_file(
+                    extracted, str(comp["serialized_file"])
+                )
+                if serialized_path is None:
+                    report.append(
+                        f"    WARNING: extracted serialized file not found: {comp['serialized_file']}"
+                    )
+                    continue
+
+                safe_type = re.sub(r"[^A-Za-z0-9_.-]+", "_", str(comp["type"]))
+                dump_path = (
+                    dumps_dir
+                    / f"go{index}_component_{comp['object_id']}_{safe_type}.txt"
+                )
+                dump_result = run(
+                    [
+                        str(tool),
+                        "dump",
+                        str(serialized_path),
+                        "--stdout",
+                        "-i",
+                        str(comp["object_id"]),
+                    ],
+                    stdout_path=dump_path,
+                )
+                if dump_result.returncode == 0:
+                    dump_paths.append(dump_path)
+                else:
+                    report.append(
+                        f"    WARNING: dump failed for object_id={comp['object_id']}"
+                    )
+
+            report.append("")
+    finally:
+        connection.close()
+
+    return dump_paths
+
+
+def append_focused_hits(dump_paths: list[Path], report: list[str]) -> int:
+    report.append("=== Focused component field hits ===")
+    hit_count = 0
+    for dump_path in dump_paths:
+        try:
+            lines = dump_path.read_text(encoding="utf-8", errors="replace").splitlines()
+        except OSError:
+            continue
+        for number, line in enumerate(lines, start=1):
+            if any(term.lower() in line.lower() for term in FIELD_TERMS):
+                report.append(f"{dump_path}:{number}: {line}")
+                hit_count += 1
     report.append("")
-    return dumps
+    report.append(f"Focused component hit count: {hit_count}")
+    return hit_count
 
 
 def main() -> int:
@@ -199,11 +313,10 @@ def main() -> int:
         f"UnityDataTool: {tool}",
         "",
     ]
-    all_dumps: list[Path] = []
 
     resources = game_root / "Shape of Dreams_Data" / "resources.assets"
     if resources.exists():
-        all_dumps.extend(inspect_serialized_file(tool, resources, out_dir / "resources", report))
+        inspect_serialized_file(tool, resources, out_dir / "resources", report)
     else:
         report.append(f"Missing: {resources}")
 
@@ -216,46 +329,13 @@ def main() -> int:
         / "defaultlocalgroup_assets_all_f2387b6895a961fa06fa44f1fcd3ded5.bundle"
     )
 
+    dump_paths: list[Path] = []
     if bundle.exists():
-        extracted = out_dir / "bundle-extracted"
-        extracted.mkdir(parents=True, exist_ok=True)
-        extract_result = run(
-            [str(tool), "archive", "extract", str(bundle), "-o", str(extracted)],
-            stdout_path=out_dir / "bundle-extract.txt",
-        )
-        if extract_result.returncode == 0:
-            for candidate in sorted(p for p in extracted.rglob("*") if p.is_file()):
-                try:
-                    if find_occurrences(candidate, TERM):
-                        all_dumps.extend(
-                            inspect_serialized_file(
-                                tool,
-                                candidate,
-                                out_dir / "bundle-objects" / candidate.name,
-                                report,
-                            )
-                        )
-                except OSError:
-                    continue
-        else:
-            report.append("Addressables bundle extraction failed; see bundle-extract logs.")
+        dump_paths = analyze_big_chomp_components(tool, bundle, out_dir, report)
     else:
         report.append(f"Missing: {bundle}")
 
-    report.append("=== Focused field hits ===")
-    hit_count = 0
-    for dump_path in all_dumps:
-        try:
-            lines = dump_path.read_text(encoding="utf-8", errors="replace").splitlines()
-        except OSError:
-            continue
-        for number, line in enumerate(lines, start=1):
-            if any(term.lower() in line.lower() for term in FIELD_TERMS):
-                report.append(f"{dump_path}:{number}: {line}")
-                hit_count += 1
-
-    report.append("")
-    report.append(f"Focused hit count: {hit_count}")
+    append_focused_hits(dump_paths, report)
     report.append(
         "Needed final fields: rarity, excludeFromPool, isCharacterSkill for St_U_BigChomp."
     )
