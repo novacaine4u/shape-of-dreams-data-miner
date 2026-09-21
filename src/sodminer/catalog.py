@@ -388,27 +388,30 @@ def _add_rules_for_item(
 ) -> None:
     if entity_type == "skill":
         normal = normal_loot_formula("skill", rarity)
-        connection.execute(
-            """
-            INSERT INTO acquisition_rules(
-                release_id, entity_id, entity_type, method_id, context_key,
-                probability_kind, probability_value, formula_text,
-                denominator_pool_id, notes, evidence_id
-            ) VALUES(?, ?, ?, ?, 'runtime', ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                release_id,
-                entity_id,
-                entity_type,
-                _method_id(connection, "normal_skill_loot"),
-                normal.probability_kind,
-                normal.probability_value,
-                normal.formula_text,
-                pool_id if normal.probability_kind != "zero" else None,
-                "Runtime pool is the union of players' unlockedGameItems minus banned items.",
-                evidence_id,
-            ),
-        )
+        for rarity_context in ("normal", "high"):
+            connection.execute(
+                """
+                INSERT INTO acquisition_rules(
+                    release_id, entity_id, entity_type, method_id, context_key,
+                    probability_kind, probability_value, formula_text,
+                    denominator_pool_id, notes, evidence_id
+                ) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    release_id,
+                    entity_id,
+                    entity_type,
+                    _method_id(connection, "normal_skill_loot"),
+                    rarity_context,
+                    normal.probability_kind,
+                    normal.probability_value,
+                    normal.formula_text,
+                    pool_id if normal.probability_kind != "zero" else None,
+                    "Pool size shown by the canonical database is the all-content eligible pool; "
+                    "actual runtime pool is the union of players' unlockedGameItems minus bans.",
+                    evidence_id,
+                ),
+            )
 
         ascension = ascension_skill_formula(rarity)
         source = ascension_input_rarity(rarity)
@@ -456,27 +459,30 @@ def _add_rules_for_item(
 
     elif entity_type == "gem":
         normal = normal_loot_formula("gem", rarity)
-        connection.execute(
-            """
-            INSERT INTO acquisition_rules(
-                release_id, entity_id, entity_type, method_id, context_key,
-                probability_kind, probability_value, formula_text,
-                denominator_pool_id, notes, evidence_id
-            ) VALUES(?, ?, ?, ?, 'runtime', ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                release_id,
-                entity_id,
-                entity_type,
-                _method_id(connection, "normal_gem_loot"),
-                normal.probability_kind,
-                normal.probability_value,
-                normal.formula_text,
-                pool_id if normal.probability_kind != "zero" else None,
-                "Runtime pool is the union of players' unlockedGameItems minus banned items.",
-                evidence_id,
-            ),
-        )
+        for rarity_context in ("normal", "high"):
+            connection.execute(
+                """
+                INSERT INTO acquisition_rules(
+                    release_id, entity_id, entity_type, method_id, context_key,
+                    probability_kind, probability_value, formula_text,
+                    denominator_pool_id, notes, evidence_id
+                ) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    release_id,
+                    entity_id,
+                    entity_type,
+                    _method_id(connection, "normal_gem_loot"),
+                    rarity_context,
+                    normal.probability_kind,
+                    normal.probability_value,
+                    normal.formula_text,
+                    pool_id if normal.probability_kind != "zero" else None,
+                    "Pool size shown by the canonical database is the all-content eligible pool; "
+                    "actual runtime pool is the union of players' unlockedGameItems minus bans.",
+                    evidence_id,
+                ),
+            )
 
         ascension = ascension_gem_formula(rarity)
         source = ascension_input_rarity(rarity)
@@ -559,7 +565,8 @@ def _extract_loot_manager_weights(
                 ("gem", "gemRarityChanceHigh"),
             ):
                 context = "high" if prefix.endswith("High") else "normal"
-                for rarity in ("Common", "Rare", "Epic", "Legendary"):
+                weights: dict[str, float] = {}
+                for rarity in ("Rare", "Epic", "Legendary"):
                     leaf = rarity.lower()
                     value = None
                     for path, candidate in fields.items():
@@ -567,28 +574,43 @@ def _extract_loot_manager_weights(
                             value = candidate
                             break
                     if isinstance(value, (int, float)):
-                        connection.execute(
-                            """
-                            INSERT INTO rarity_weights(
-                                release_id, family, context_key, rarity_name,
-                                weight, evidence_id
-                            ) VALUES(?, ?, ?, ?, ?, ?)
-                            ON CONFLICT(
-                                release_id, family, context_key, rarity_name
-                            ) DO UPDATE SET
-                                weight = excluded.weight,
-                                evidence_id = excluded.evidence_id
-                            """,
+                        weights[rarity] = float(value)
+
+                if len(weights) == 3:
+                    weights["Common"] = max(
+                        0.0,
+                        1.0 - weights["Rare"] - weights["Epic"] - weights["Legendary"],
+                    )
+
+                for rarity, value in weights.items():
+                    connection.execute(
+                        """
+                        INSERT INTO rarity_weights(
+                            release_id, family, context_key, rarity_name,
+                            weight, formula_text, evidence_id
+                        ) VALUES(?, ?, ?, ?, ?, ?, ?)
+                        ON CONFLICT(
+                            release_id, family, context_key, rarity_name
+                        ) DO UPDATE SET
+                            weight = excluded.weight,
+                            formula_text = excluded.formula_text,
+                            evidence_id = excluded.evidence_id
+                        """,
+                        (
+                            release_id,
+                            family,
+                            context,
+                            rarity,
+                            value,
                             (
-                                release_id,
-                                family,
-                                context,
-                                rarity,
-                                float(value),
-                                evidence_id,
+                                "1 - legendary - epic - rare"
+                                if rarity == "Common"
+                                else None
                             ),
-                        )
-                        inserted += 1
+                            evidence_id,
+                        ),
+                    )
+                    inserted += 1
     return inserted
 
 
