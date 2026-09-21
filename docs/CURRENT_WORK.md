@@ -562,3 +562,14 @@ For Big Chomp:
 `P(Big Chomp | ascend Legendary memory) = 1 / N_runtime_eligible_Unique_skills`.
 
 The static dictionary also computes content-eligible pool counts as a reproducible reference denominator, while preserving notes that live player unlocks and lobby bans can reduce the runtime denominator.
+
+
+### Exact-path rarity parser hardening
+
+The LootManager serialized-field parser now matches exact dotted path segments for:
+- `skillRarityChance`
+- `skillRarityChanceHigh`
+- `gemRarityChance`
+- `gemRarityChanceHigh`
+
+This prevents the normal field name from accidentally matching the High field name by substring.
