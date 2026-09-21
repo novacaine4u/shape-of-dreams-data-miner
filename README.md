@@ -17,7 +17,9 @@ The first acceptance test is the new **Big Chomp** memory from v1.4 / Starless P
 
 ## Status
 
-Early foundation. The read-only scanner, normalized evidence model, installation inspector, and provenance-aware raw string extractor are implemented. The inspector identifies Unity version clues, Mono vs IL2CPP indicators, managed assemblies, RawData/mod resources, Unity resource files, localization candidates, and likely structured data files. The string extractor supports ASCII, UTF-8, and UTF-16LE with byte offsets and release provenance. The next stage is to run these tools against the current game build, then select the Unity-aware extraction path from the observed layout.
+The project now has an end-to-end proven acquisition trace for Big Chomp plus reusable managed-code, Unity serialized-data, and SQLite dictionary tooling. The read-only scanner, installation inspector, provenance-aware string/JSON search, metadata/call-site tracing, targeted decompilation, UnityDataTool integration, and game-wide SQLite catalog builder are implemented.
+
+Big Chomp is the first regression case: its Unique rarity, pool eligibility, profile discovery state, Shrine of Ascension acquisition path, and context-dependent rate formula are all backed by explicit game data/code evidence.
 
 ## Quick start
 
@@ -109,6 +111,21 @@ The first end-to-end research target is the v1.4 **Big Chomp** memory. The miner
 6. Is an unlock condition explicitly encoded?
 7. If the condition is inferred, what evidence supports the inference?
 8. What changed between releases?
+
+## SQLite data dictionary
+
+Build the current release dictionary on Windows:
+
+    update-windows.cmd
+    tools\build-game-data-dictionary.cmd
+
+Default output:
+
+    data\normalized\shape-of-dreams-v1.4.0.sqlite
+
+The database stores every Unity object row from the Addressables analysis, every RawData JSON record, normalized gameplay entities, provenance, pools, acquisition mechanisms, and context-aware drop-rate formulas.
+
+See `docs/DATA_DICTIONARY.md` for schema and rate semantics.
 
 ## Release snapshots
 
