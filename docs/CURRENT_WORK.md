@@ -108,33 +108,13 @@ This is explicit negative evidence for the achievement path.
 
 ## Immediate next actions
 
-A targeted helper is now committed:
-
-`tools/decompile-big-chomp-targeted.cmd`
-
-It decompiles only:
-
-- `St_U_BigChomp`
-- `SkillTrigger`
-- `DewProfile`
-
-and writes focused output under:
-
-`data/extracted/managed-targeted/`
-
-Next:
-
-1. On Windows, run `update-windows.cmd`.
-2. Run `tools\decompile-big-chomp-targeted.cmd`.
-3. Upload:
-   - `data\extracted\managed-targeted\St_U_BigChomp.cs`
-   - `data\extracted\managed-targeted\SkillTrigger.cs`
-   - `data\extracted\managed-targeted\DewProfile.cs`
-   - `data\extracted\managed-targeted\big-chomp-targeted-unlock-trace.txt`
-4. Inspect `St_U_BigChomp` constructor/static initialization for any parent/category/resource association.
-5. Inspect `SkillTrigger` for fields/properties participating in profile discovery/unlock state.
-6. Inspect `DewProfile` and nested `UnlockData` for how `skills` is populated and how `Locked` vs `NotDiscovered` is assigned.
-7. Preserve any direct mapping or initialization rule as explicit evidence.
+1. Add a managed IL call-site tracer for `DewProfile.DiscoverSkill`.
+2. Scan `Dew.Core.dll`, `Dew.Contents.dll`, `Dew.UI.dll`, and `Assembly-CSharp.dll` for call/callvirt instructions targeting that method.
+3. Report the owning caller type + method for every match.
+4. Target-decompile only those caller types.
+5. Determine the exact gameplay condition that invokes `DiscoverSkill`, then check whether any caller filters by skill type/name/resource.
+6. Separately verify whether `St_U_BigChomp` belongs to `Dew.allHeroSkills` / a Hero loadout; if not, its validated pre-discovery state is `NotDiscovered`.
+7. Preserve the final acquisition path as explicit evidence.
 
 ## Recovery instruction for a new ChatGPT session
 
@@ -180,3 +160,25 @@ Explicit findings:
 Conclusion: Big Chomp is not wired to acquisition through managed custom-attribute metadata. Combined with the earlier 94-entry `AchUnlockOnComplete` scan, the standard achievement-attribute unlock path is ruled out.
 
 Next investigation layer: targeted single-type decompilation of `St_U_BigChomp`, `SkillTrigger`, and `DewProfile` (including nested `UnlockData`) to inspect constructors/static initialization/profile unlock-status assignment without invoking whole-project decompilation.
+
+
+## Targeted decompile result: profile state machine
+
+Targeted decompilation completed for:
+
+- `St_U_BigChomp`
+- `SkillTrigger`
+- `DewProfile`
+
+Key findings:
+
+- `St_U_BigChomp` itself is an empty subclass of `SkillTrigger` apart from Mirror-generated plumbing. It contains no bespoke unlock/acquisition logic.
+- `DewProfile.Validate()` builds a set of targets locked by **incomplete achievements**. That set includes direct achievement targets and, when an incomplete achievement unlocks a Hero, that Hero's Q/R/Identity loadout skills.
+- Skills not in that locked set are passed to `UnlockSkill(name)`.
+- `UnlockSkill(name)` checks whether the skill is a Hero skill and whether `Dew.GetRequiredAchievementOfTarget(name)` returns an achievement.
+- If the skill is **not** a Hero skill and has **no** required achievement, `UnlockSkill` sets its state to `UnlockStatus.NotDiscovered` rather than `Complete`.
+- `DiscoverSkill(name)` is the observed transition from `NotDiscovered` to `Complete`.
+
+Current Big Chomp evidence already rules out a direct `AchUnlockOnComplete` mapping. Therefore, unless Big Chomp is present in a locked Hero's loadout, its expected profile state is `NotDiscovered` and actual acquisition occurs when some gameplay code calls `DiscoverSkill("St_U_BigChomp")`.
+
+The next high-value question is now: **which methods call `DewProfile.DiscoverSkill`, and under what gameplay condition?**
