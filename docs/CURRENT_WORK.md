@@ -108,26 +108,26 @@ This is explicit negative evidence for the achievement path.
 
 ## Immediate next actions
 
-Serialized object inspection tooling is now committed.
+The existing serialized inspector has been upgraded to enumerate Big Chomp's attached components through UnityDataTool's analyzer database.
 
 Next:
 
 1. On Windows, run `update-windows.cmd`.
-2. Run `tools\inspect-big-chomp-serialized.cmd`.
-3. The first run automatically downloads the official pinned UnityDataTool v2.2.0 Windows build into ignored `.tools/`.
-4. Upload:
+2. Rerun `tools\inspect-big-chomp-serialized.cmd`.
+3. Upload:
    - `data\extracted\big-chomp-serialized\summary.txt`
-5. If the summary exposes the Big Chomp component values, record:
+4. The summary should now list every component attached to both `St_U_BigChomp` GameObjects and focused field hits from their dumps.
+5. Record the actual serialized values for:
    - `rarity`;
    - `isCharacterSkill`;
    - `excludeFromPool`.
-6. If TypeTrees prevent readable object dumping, use the exact mapped object IDs/file names from the summary to add the smallest possible fallback parser step.
-7. If the values are Unique / false / false, record Ascension of a Legendary memory as an explicit acquisition path because:
+6. If those values are Unique / false / false, record Ascension of a Legendary memory as an explicit acquisition path because:
    - NotDiscovered is available in-game;
    - the skill is admitted to `unlockedGameItems`;
    - LootManager admits it to `poolSkillsByRarity[Unique]`;
    - Shrine_Ascension explicitly rolls Legendary -> Unique;
    - Shrine_Ascension calls `DiscoverSkill` on the resulting skill.
+7. If a field still does not appear, use the listed component object id/type to dump only that exact component with a minimal fallback.
 
 ## Recovery instruction for a new ChatGPT session
 
@@ -391,3 +391,32 @@ Next action remains:
 1. run `update-windows.cmd`;
 2. rerun `tools\inspect-big-chomp-serialized.cmd`;
 3. upload `data\extracted\big-chomp-serialized\summary.txt`.
+
+
+## Big Chomp serialized GameObjects located
+
+The first UnityDataTool serialized inspection succeeded far enough to map Big Chomp to concrete AssetBundle GameObjects:
+
+Bundle serialized file:
+`CAB-e5deeeb495f78d76b72c05f70e4c2038`
+
+Two GameObjects named `St_U_BigChomp` were found:
+
+- object id `-8668003336564849786`
+- object id `6771284007984103187`
+
+The AssetBundle object also contains both source asset paths:
+
+- `Assets/Dew/Skills/U_BigChomp/St_U_BigChomp.prefab`
+- `Assets/Res/LightAssets/St_U_BigChomp.prefab`
+
+The initial object-reference walker failed to follow attached components because its text parsing did not match UnityDataTool's emitted PPtr format. That failure did not invalidate the located GameObjects.
+
+The inspector has now been revised to use UnityDataTool's supported `analyze` SQLite workflow:
+- analyze the specific AssetBundle;
+- query `object_view` for GameObjects named `St_U_BigChomp`;
+- query all component objects whose `game_object` points to those GameObjects;
+- dump each component object by Unity object id;
+- search component dumps for `rarity`, `excludeFromPool`, and `isCharacterSkill`.
+
+This uses AssetBundle TypeTrees and avoids fragile text reference parsing.
