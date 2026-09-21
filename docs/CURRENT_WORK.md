@@ -128,3 +128,15 @@ Read, in this order:
 Then inspect the current repository before changing anything.
 
 Resume from the first incomplete item under **Immediate next actions**. Do not repeat completed RawData searches unless the game release changed.
+
+
+## Windows updater artifact note
+
+The first local build of the .NET metadata scanner created untracked:
+
+- `tools/MetadataTrace/bin/`
+- `tools/MetadataTrace/obj/`
+
+These are disposable build artifacts. They were added to `.gitignore` so future scanner runs will not make `update-windows.cmd` report a dirty working tree.
+
+If a Windows checkout was created before that ignore rule arrived, delete those two directories once, then rerun `update-windows.cmd`.
