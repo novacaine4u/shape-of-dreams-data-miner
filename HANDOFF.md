@@ -145,6 +145,19 @@ Inspection also confirms the Big Chomp override directory contains:
 
 Next trace step: inspect both override files in full and run a broader non-exact search for `BigChomp` / `U_BigChomp` to capture related internal object names before moving to managed assemblies.
 
+### Managed-code unlock mechanism confirmed by API docs
+
+The official API documentation now gives a concrete path for the next stage:
+
+- `DewProfile.skills` is `Dictionary<string, DewProfile.UnlockData>` and contains all skills.
+- `DewProfile.UnlockData.status` is an `UnlockStatus`.
+- `UnlockStatus.Locked` means locked by an associated Achievement or Hero.
+- `AchUnlockOnComplete(Type targetType)` is a class-level attribute that associates an achievement class with the target type it unlocks.
+
+The broad RawData trace returned 28 `BigChomp` matches total: the two override targets (`Ai_U_BigChomp`, `St_U_BigChomp`) plus localized memory keys/image values. The two override files contain gameplay mechanics only; neither carries acquisition/unlock metadata.
+
+This makes `Dew.Contents.dll` the most likely next target because content-specific achievement/skill types are expected there, with `Dew.Core.dll` providing the unlock infrastructure. The next useful extraction is a managed-code decompile/search for `St_U_BigChomp`, `AchUnlockOnComplete`, and achievement classes.
+
 Immediate next action after updating the Windows checkout:
 
     sodminer json-search "C:\Program Files (x86)\Steam\steamapps\common\Shape of Dreams\RawData" "St_U_BigChomp" --exact --output data\extracted\v1.4.0-big-chomp-json-refs.jsonl
