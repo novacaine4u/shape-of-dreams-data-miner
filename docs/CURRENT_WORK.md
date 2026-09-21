@@ -108,22 +108,16 @@ This is explicit negative evidence for the achievement path.
 
 ## Immediate next actions
 
-A .NET 8 IL call-site tracer is now committed:
-
-- `tools/MethodCallTrace/MethodCallTrace.csproj`
-- `tools/MethodCallTrace/Program.cs`
-- `tools/trace-discover-skill-callers.cmd`
-
-It resolves the metadata token for `DewProfile.DiscoverSkill` in each assembly, parses method IL, and reports caller type + method for direct `call`/`callvirt` sites.
-
-Next:
-
-1. On Windows, run `update-windows.cmd`.
-2. Run `tools\trace-discover-skill-callers.cmd`.
-3. Upload `data\extracted\managed-callers\discover-skill-callers.txt`.
-4. Target-decompile only the reported caller type(s).
-5. Determine the exact gameplay condition that invokes `DiscoverSkill`, then check whether the caller filters by skill type/name/resource.
-6. Separately verify whether `St_U_BigChomp` belongs to `Dew.allHeroSkills` / a Hero loadout; if not, its validated pre-discovery state is `NotDiscovered`.
+1. Add a targeted decompile helper for `AchievementManager`, `DewSave`, and `Shrine_Ascension`.
+2. Decompile those types only; do not use whole-project mode.
+3. Extract and inspect:
+   - `AchievementManager.Dismantled`
+   - `AchievementManager.ClientHeroEventOnSkillPickup`
+   - `DewSave.CreateProfile`
+   - `Shrine_Ascension.UserCode_RpcShowNotice__DewPlayer__String__String__Int32`
+4. Determine which paths call `DiscoverSkill` generically and which are content-specific.
+5. If `Shrine_Ascension` passes the skill name dynamically, trace the source of that argument and check for `St_U_BigChomp` / Starless Path context.
+6. Separately verify whether `St_U_BigChomp` belongs to `Dew.allHeroSkills` / a Hero loadout.
 7. Preserve the final acquisition path as explicit evidence.
 
 ## Recovery instruction for a new ChatGPT session
@@ -192,3 +186,27 @@ Key findings:
 Current Big Chomp evidence already rules out a direct `AchUnlockOnComplete` mapping. Therefore, unless Big Chomp is present in a locked Hero's loadout, its expected profile state is `NotDiscovered` and actual acquisition occurs when some gameplay code calls `DiscoverSkill("St_U_BigChomp")`.
 
 The next high-value question is now: **which methods call `DewProfile.DiscoverSkill`, and under what gameplay condition?**
+
+
+## DiscoverSkill call-site result
+
+Managed IL scanning found exactly four direct call sites to `DewProfile.DiscoverSkill` across the scanned game assemblies:
+
+`Dew.Core.dll`
+- `AchievementManager::Dismantled`
+- `AchievementManager::ClientHeroEventOnSkillPickup`
+- `DewSave::CreateProfile`
+
+`Dew.Contents.dll`
+- `Shrine_Ascension::UserCode_RpcShowNotice__DewPlayer__String__String__Int32`
+
+No direct call sites were found in `Dew.UI.dll` or `Assembly-CSharp.dll`.
+
+Interpretation:
+
+- ordinary skill pickup can permanently discover a `NotDiscovered` skill;
+- dismantling a skill can also discover it;
+- profile creation has a discovery path that must be inspected to determine whether it seeds defaults;
+- `Shrine_Ascension` has a special content-specific discovery path and is currently the strongest lead for a non-generic Big Chomp acquisition mechanic.
+
+The next step is to target-decompile `AchievementManager`, `DewSave`, and `Shrine_Ascension` and inspect only the relevant caller methods.
