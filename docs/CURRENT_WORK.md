@@ -281,3 +281,14 @@ Therefore Big Chomp's Ascension eligibility is not proven merely by being a `Ski
 - Big Chomp's serialized `excludeFromPool`.
 
 `Dew.allSkills` contains all non-abstract `SkillTrigger` subclasses. `Dew.allHeroSkills` is separately populated from each included Hero's Q/R/Identity loadout skills.
+
+
+### Unique-rarity routing note
+
+`LootManager.SelectRarity()` only returns Common, Rare, Epic, or Legendary. It never returns `Rarity.Unique`.
+
+Therefore ordinary `SelectSkillRarity()`-based loot generation does not directly roll Unique skills.
+
+`Shrine_Ascension.GetNextRarity()` explicitly maps Legendary -> Unique and then indexes `poolSkillsByRarity[Unique]`.
+
+This makes Ascension a structurally special path to Unique skills. If `St_U_BigChomp` is confirmed as an eligible Unique pool member, Ascension is a strong candidate for its intended discovery path.
