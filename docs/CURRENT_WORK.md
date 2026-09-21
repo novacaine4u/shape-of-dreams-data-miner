@@ -108,15 +108,31 @@ This is explicit negative evidence for the achievement path.
 
 ## Immediate next actions
 
-1. Add a targeted decompile helper for `AchievementManager`, `DewSave`, and `Shrine_Ascension`.
-2. Decompile those types only; do not use whole-project mode.
-3. Extract and inspect:
-   - `AchievementManager.Dismantled`
-   - `AchievementManager.ClientHeroEventOnSkillPickup`
-   - `DewSave.CreateProfile`
-   - `Shrine_Ascension.UserCode_RpcShowNotice__DewPlayer__String__String__Int32`
-4. Determine which paths call `DiscoverSkill` generically and which are content-specific.
-5. If `Shrine_Ascension` passes the skill name dynamically, trace the source of that argument and check for `St_U_BigChomp` / Starless Path context.
+A targeted caller helper is now committed:
+
+`tools/decompile-discover-skill-callers.cmd`
+
+It decompiles only:
+
+- `AchievementManager`
+- `DewSave`
+- `Shrine_Ascension`
+
+and writes output under:
+
+`data/extracted/discover-skill-callers-decompiled/`
+
+Next:
+
+1. On Windows, run `update-windows.cmd`.
+2. Run `tools\decompile-discover-skill-callers.cmd`.
+3. Upload:
+   - `data\extracted\discover-skill-callers-decompiled\AchievementManager.cs`
+   - `data\extracted\discover-skill-callers-decompiled\DewSave.cs`
+   - `data\extracted\discover-skill-callers-decompiled\Shrine_Ascension.cs`
+   - `data\extracted\discover-skill-callers-decompiled\discover-skill-caller-context.txt`
+4. Determine which caller paths are generic and whether `Shrine_Ascension` carries content-specific acquisition logic.
+5. If the shrine passes the skill name dynamically, trace the source of that argument and check for `St_U_BigChomp` / Starless Path context.
 6. Separately verify whether `St_U_BigChomp` belongs to `Dew.allHeroSkills` / a Hero loadout.
 7. Preserve the final acquisition path as explicit evidence.
 
