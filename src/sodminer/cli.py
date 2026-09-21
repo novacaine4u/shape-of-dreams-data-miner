@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 
 from .inspector import inspect_installation, write_inspection
+from .jsonsearch import search_json_path, write_json_search_records
 from .scanner import scan_installation
 from .strings import extract_strings_from_path, write_string_records
 
@@ -43,6 +44,28 @@ def build_parser() -> argparse.ArgumentParser:
         help="Optional JSONL output path. If omitted, records are printed to stdout.",
     )
 
+    json_search = sub.add_parser(
+        "json-search",
+        help="Search structured JSON files and preserve JSON-path provenance.",
+    )
+    json_search.add_argument("path", type=Path)
+    json_search.add_argument("term")
+    json_search.add_argument(
+        "--exact",
+        action="store_true",
+        help="Require an exact key/value match instead of a substring match.",
+    )
+    json_search.add_argument(
+        "--case-sensitive",
+        action="store_true",
+        help="Use case-sensitive matching.",
+    )
+    json_search.add_argument(
+        "--output",
+        type=Path,
+        help="Optional JSONL output path. If omitted, records are printed to stdout.",
+    )
+
     scan = sub.add_parser("scan", help="Scan a game installation.")
     scan.add_argument("path", type=Path)
     scan.add_argument("--release", required=True)
@@ -71,6 +94,22 @@ def main() -> int:
         if args.output:
             destination, count = write_string_records(records, args.output)
             print(f"Extracted {count} strings.")
+            print(f"Output: {destination}")
+        else:
+            for record in records:
+                print(json.dumps(record, sort_keys=True, ensure_ascii=False))
+        return 0
+
+    if args.command == "json-search":
+        records = search_json_path(
+            args.path,
+            args.term,
+            exact=args.exact,
+            case_sensitive=args.case_sensitive,
+        )
+        if args.output:
+            destination, count = write_json_search_records(records, args.output)
+            print(f"Found {count} JSON matches.")
             print(f"Output: {destination}")
         else:
             for record in records:
