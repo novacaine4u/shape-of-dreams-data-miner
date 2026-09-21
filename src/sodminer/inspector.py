@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 UNITY_VERSION_RE = re.compile(
-    rb"(?<!\\d)((?:\\d{4}|\\d)\\.\\d+\\.\\d+[abfp]\\d+)(?!\\d)",
+    rb"(?<!\d)((?:\d{4}|\d)\.\d+\.\d+[abfp]\d+)(?!\d)",
     re.IGNORECASE,
 )
 
