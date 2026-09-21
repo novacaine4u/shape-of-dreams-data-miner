@@ -17,15 +17,17 @@ The first acceptance test is the new **Big Chomp** memory from v1.4 / Starless P
 
 ## Status
 
-Early foundation. The read-only scanner and normalized evidence model are implemented. The next stage adds Unity/assembly extraction and entity-specific extractors.
+Early foundation. The read-only scanner, normalized evidence model, and installation inspector are implemented. The inspector identifies Unity version clues, Mono vs IL2CPP indicators, managed assemblies, RawData/mod resources, Unity resource files, localization candidates, and likely structured data files. The next stage is to run it against the current game build, then add raw-string and Unity-aware extraction based on the observed layout.
 
 ## Quick start
 
     python -m pip install -e .
 
+    sodminer inspect "C:/Program Files (x86)/Steam/steamapps/common/Shape of Dreams"
+
     sodminer scan "C:/Program Files (x86)/Steam/steamapps/common/Shape of Dreams" --release v1.4.0
 
-The scanner only reads the installation and writes manifests to the project output directory.
+Use `--output inspection.json` with `sodminer inspect` to save the report instead of printing it. Both commands treat the game installation as read-only.
 
 ## Evidence model
 
