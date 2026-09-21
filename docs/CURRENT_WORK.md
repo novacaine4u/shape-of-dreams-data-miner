@@ -108,11 +108,21 @@ This is explicit negative evidence for the achievement path.
 
 ## Immediate next actions
 
-1. Add a managed IL call-site tracer for `DewProfile.DiscoverSkill`.
-2. Scan `Dew.Core.dll`, `Dew.Contents.dll`, `Dew.UI.dll`, and `Assembly-CSharp.dll` for call/callvirt instructions targeting that method.
-3. Report the owning caller type + method for every match.
-4. Target-decompile only those caller types.
-5. Determine the exact gameplay condition that invokes `DiscoverSkill`, then check whether any caller filters by skill type/name/resource.
+A .NET 8 IL call-site tracer is now committed:
+
+- `tools/MethodCallTrace/MethodCallTrace.csproj`
+- `tools/MethodCallTrace/Program.cs`
+- `tools/trace-discover-skill-callers.cmd`
+
+It resolves the metadata token for `DewProfile.DiscoverSkill` in each assembly, parses method IL, and reports caller type + method for direct `call`/`callvirt` sites.
+
+Next:
+
+1. On Windows, run `update-windows.cmd`.
+2. Run `tools\trace-discover-skill-callers.cmd`.
+3. Upload `data\extracted\managed-callers\discover-skill-callers.txt`.
+4. Target-decompile only the reported caller type(s).
+5. Determine the exact gameplay condition that invokes `DiscoverSkill`, then check whether the caller filters by skill type/name/resource.
 6. Separately verify whether `St_U_BigChomp` belongs to `Dew.allHeroSkills` / a Hero loadout; if not, its validated pre-discovery state is `NotDiscovered`.
 7. Preserve the final acquisition path as explicit evidence.
 
