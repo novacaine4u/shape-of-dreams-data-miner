@@ -1,5 +1,7 @@
 # Shape of Dreams Data Miner — Conversation Handoff
 
+> **Active-work recovery:** read `docs/CURRENT_WORK.md` first. It is the git-tracked live checkpoint for interruption/time-out recovery.
+
 ## Purpose
 
 This document is the handoff for continuing the Shape of Dreams Data Miner project in a new ChatGPT conversation.
