@@ -420,3 +420,32 @@ The inspector has now been revised to use UnityDataTool's supported `analyze` SQ
 - search component dumps for `rarity`, `excludeFromPool`, and `isCharacterSkill`.
 
 This uses AssetBundle TypeTrees and avoids fragile text reference parsing.
+
+
+## Big Chomp serialized component values
+
+UnityDataTool analyzer successfully enumerated both `St_U_BigChomp` GameObjects and their attached components in the Addressables bundle.
+
+For both copies, the Big Chomp `MonoBehaviour` component reports the same serialized values:
+
+- `rarity (UInt8) 10`
+- `excludeFromPool (UInt8) 0`
+
+Concrete component object ids:
+
+- GameObject `-8668003336564849786`
+  - Big Chomp MonoBehaviour `-1678651263000853626`
+- GameObject `6771284007984103187`
+  - Big Chomp MonoBehaviour `7265974834119638803`
+
+The decompiled `SkillTrigger` type shows that `isCharacterSkill` is **not serialized**. It is computed:
+
+`public bool isCharacterSkill => rarity == Rarity.Character;`
+
+Therefore the only remaining field interpretation needed for pool eligibility is the symbolic enum mapping for serialized `rarity = 10`.
+
+Once `10` is mapped to its `Rarity` enum member:
+- `excludeFromPool == false` is already explicit;
+- `isCharacterSkill` follows directly from whether that enum member equals `Rarity.Character`.
+
+One final independent check should also verify that `St_U_BigChomp` is not referenced by any Hero loadout (`Dew.allHeroSkills` path), so the profile-state route is fully closed rather than inferred.
