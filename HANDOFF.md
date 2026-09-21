@@ -43,6 +43,29 @@ Important commits created so far:
 
 Before making more changes, inspect the current repository because the file tree will evolve.
 
+## Progress update — 2026-09-21
+
+The recommended documentation/inspection stage has begun.
+
+New implementation:
+- `src/sodminer/inspector.py`
+- `tests/test_inspector.py`
+- `sodminer inspect <path> [--output <file>]`
+- `docs/MODDING_RESEARCH.md`
+
+The inspector is dependency-free and read-only. It inventories Unity version clues, Mono vs IL2CPP indicators, managed/core assemblies, RawData, Mods/ModTemplate, !ModResources/overrides, Unity resources/bundles, localization candidates, and likely structured data files.
+
+Modding/API research established several important documented leads:
+- the official mod template references game assemblies and Harmony is built in;
+- JSON overrides live under `RawData/!ModResources/overrides`;
+- `DewResources` exposes a resource database with GUID/name/type lookup and dependency traversal;
+- `SkillTrigger` represents memories/skills/abilities;
+- `DewProfile.skills` contains all skills and maps them to `UnlockData`;
+- `UnlockStatus.Locked` is documented as locked by an associated Achievement or Hero;
+- `DewLocalization` exposes localization data/build data.
+
+Immediate next action: run `sodminer inspect` against the current Shape of Dreams installation and preserve that report. Use the observed layout to choose the parser/extraction path. Then add the reusable raw-string extractor and begin tracing Big Chomp through resource IDs, dependencies, localization, and unlock references.
+
 ## Existing implemented components
 
 src/sodminer/models.py
