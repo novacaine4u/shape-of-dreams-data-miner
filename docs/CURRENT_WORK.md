@@ -68,23 +68,29 @@ The metadata-scanner path works and is now preferred.
 
 ## Active implementation
 
-The .NET 8 metadata-scanner fallback is now implemented and committed:
+The .NET 8 metadata-scanner fallback is implemented and is now the preferred managed-code path:
 
 - `tools/MetadataTrace/MetadataTrace.csproj`
 - `tools/MetadataTrace/Program.cs`
 - `tools/trace-big-chomp-unlock.cmd`
+- `tools/trace-big-chomp-metadata-wide.cmd`
 
-The scanner avoids method decompilation entirely. It:
+The scanner avoids method decompilation entirely.
 
-1. enumerates managed custom attributes;
-2. resolves attributes whose constructor type contains `AchUnlockOnComplete`;
-3. identifies the owning metadata type;
-4. inspects the raw custom-attribute blob for `St_U_BigChomp`;
-5. prints any owner whose attribute targets Big Chomp.
+It now supports:
 
-The CMD wrapper builds the scanner with .NET 8 and scans `Dew.Contents.dll`, writing:
+- filtering to a specific attribute type such as `AchUnlockOnComplete`;
+- wildcard scanning of all custom attributes;
+- matching-only output for blobs that contain `St_U_BigChomp`;
+- reporting matching type definitions, metadata token, base type, interfaces, and type-level custom attributes.
+
+The achievement-only trace writes:
 
 `data/extracted/managed-metadata/big-chomp-achievement-attributes.txt`
+
+The new wide trace scans both `Dew.Contents.dll` and `Dew.Core.dll` and writes:
+
+`data/extracted/managed-metadata/big-chomp-wide-metadata.txt`
 
 ## Latest managed-metadata result
 
@@ -102,11 +108,14 @@ This is explicit negative evidence for the achievement path.
 
 ## Immediate next actions
 
-1. Extend the metadata scanner to search **all custom attributes** for `St_U_BigChomp`, not just `AchUnlockOnComplete`.
-2. Search metadata/type relationships for hero-associated unlock structures that reference `St_U_BigChomp`.
-3. Add a targeted `DewProfile` / `UnlockData` inspection path that avoids whole-project decompilation.
-4. If Big Chomp has no Achievement/Hero association, determine whether its `UnlockData.status` defaults to `NotDiscovered` instead of `Locked`.
-5. Preserve any resulting owner/type/reference as explicit evidence.
+1. On Windows, run `update-windows.cmd`.
+2. Run `tools\trace-big-chomp-metadata-wide.cmd`.
+3. Upload or inspect `data\extracted\managed-metadata\big-chomp-wide-metadata.txt`.
+4. Use the reported full type name/base/interfaces plus any custom-attribute owner match to determine whether Big Chomp has a hero/content association.
+5. Add targeted ILSpy single-type decompilation using `-t|--type` for only the relevant type(s); avoid whole-project `-p`.
+6. Target `DewProfile` / `UnlockData` initialization next if metadata alone does not reveal the relationship.
+7. If Big Chomp has no Achievement/Hero association, determine whether its `UnlockData.status` defaults to `NotDiscovered` instead of `Locked`.
+8. Preserve any resulting owner/type/reference as explicit evidence.
 
 ## Recovery instruction for a new ChatGPT session
 
