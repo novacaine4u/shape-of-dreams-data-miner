@@ -149,6 +149,7 @@ def main() -> int:
         )
         print(f"SQLite dictionary: {result['output']}")
         print(f"Entities: {result['entities']}")
+        print(f"Unity objects: {result['unity_objects']}")
         print(f"Raw records: {result['raw_records']}")
         print(f"Serialized skills/gems: {result['serialized_items']}")
         print(f"Pool members: {result['pool_members']}")
