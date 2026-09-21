@@ -9,6 +9,7 @@ from pathlib import Path
 from .inspector import inspect_installation, write_inspection
 from .jsonsearch import search_json_path, write_json_search_records
 from .scanner import scan_installation
+from .catalog import build_data_dictionary
 from .strings import extract_strings_from_path, write_string_records
 
 
@@ -70,6 +71,19 @@ def build_parser() -> argparse.ArgumentParser:
     scan.add_argument("path", type=Path)
     scan.add_argument("--release", required=True)
     scan.add_argument("--output", type=Path, default=Path("data/raw"))
+
+    catalog = sub.add_parser(
+        "catalog-build",
+        help="Build a provenance-aware SQLite game data dictionary.",
+    )
+    catalog.add_argument("--analysis-db", type=Path, required=True)
+    catalog.add_argument("--bundle-root", type=Path, required=True)
+    catalog.add_argument("--rawdata", type=Path, required=True)
+    catalog.add_argument("--unity-tool", type=Path, required=True)
+    catalog.add_argument("--release", required=True)
+    catalog.add_argument("--output", type=Path, required=True)
+    catalog.add_argument("--source-root", type=Path)
+    catalog.add_argument("--cache-root", type=Path)
     return parser
 
 
@@ -120,6 +134,26 @@ def main() -> int:
         result = scan_installation(args.path, args.release, args.output)
         print(f"Scanned {result['file_count']} files.")
         print(f"Manifest: {result['manifest']}")
+        return 0
+
+    if args.command == "catalog-build":
+        result = build_data_dictionary(
+            analysis_db=args.analysis_db,
+            bundle_root=args.bundle_root,
+            rawdata_root=args.rawdata,
+            unity_tool=args.unity_tool,
+            release=args.release,
+            output=args.output,
+            source_root=args.source_root,
+            cache_root=args.cache_root,
+        )
+        print(f"SQLite dictionary: {result['output']}")
+        print(f"Entities: {result['entities']}")
+        print(f"Raw records: {result['raw_records']}")
+        print(f"Serialized skills/gems: {result['serialized_items']}")
+        print(f"Pool members: {result['pool_members']}")
+        print(f"Acquisition rules: {result['acquisition_rules']}")
+        print(f"Serialized rarity weights: {result['rarity_weights']}")
         return 0
 
     return 1
