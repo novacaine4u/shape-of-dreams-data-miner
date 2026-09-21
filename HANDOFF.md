@@ -49,11 +49,14 @@ The recommended documentation/inspection stage has begun.
 
 New implementation:
 - `src/sodminer/inspector.py`
+- `src/sodminer/strings.py`
 - `tests/test_inspector.py`
+- `tests/test_strings.py`
 - `sodminer inspect <path> [--output <file>]`
+- `sodminer strings <path> --release <release> [--contains <text>] [--min-length <n>] [--output <file>]`
 - `docs/MODDING_RESEARCH.md`
 
-The inspector is dependency-free and read-only. It inventories Unity version clues, Mono vs IL2CPP indicators, managed/core assemblies, RawData, Mods/ModTemplate, !ModResources/overrides, Unity resources/bundles, localization candidates, and likely structured data files.
+The inspector is dependency-free and read-only. It inventories Unity version clues, Mono vs IL2CPP indicators, managed/core assemblies, RawData, Mods/ModTemplate, !ModResources/overrides, Unity resources/bundles, localization candidates, and likely structured data files. The raw string extractor uses memory-mapped reads and records source file, release, byte offset, encoding, and text for ASCII, UTF-8, and UTF-16LE findings.
 
 Modding/API research established several important documented leads:
 - the official mod template references game assemblies and Harmony is built in;
@@ -64,7 +67,7 @@ Modding/API research established several important documented leads:
 - `UnlockStatus.Locked` is documented as locked by an associated Achievement or Hero;
 - `DewLocalization` exposes localization data/build data.
 
-Immediate next action: run `sodminer inspect` against the current Shape of Dreams installation and preserve that report. Use the observed layout to choose the parser/extraction path. Then add the reusable raw-string extractor and begin tracing Big Chomp through resource IDs, dependencies, localization, and unlock references.
+Immediate next action: run `sodminer inspect` against the current Shape of Dreams installation and preserve that report, then run `sodminer strings` filtered for `Big Chomp`. Use the observed layout and raw hits to choose the parser/extraction path, then trace Big Chomp through resource IDs, dependencies, localization, and unlock references.
 
 ## Existing implemented components
 
@@ -88,8 +91,10 @@ Read-only installation scanner. It recursively scans a game installation, ignore
 
 src/sodminer/cli.py
 
-Current command:
+Current commands:
 
+    sodminer inspect <path> [--output <file>]
+    sodminer strings <path> --release <release> [--contains <text>] [--min-length <n>] [--output <file>]
     sodminer scan <path> --release <release> [--output <directory>]
 
 src/sodminer/extractors/common.py
