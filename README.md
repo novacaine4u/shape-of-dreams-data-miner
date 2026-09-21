@@ -140,3 +140,12 @@ This makes future game updates useful rather than destructive: a new release bec
 ## License
 
 MIT
+
+
+## Managed-code research
+
+When RawData does not contain an explicit relationship, the repository includes an optional read-only managed assembly decompilation helper:
+
+    tools\decompile-managed.cmd
+
+It uses the repo-local `ilspycmd` tool manifest, decompiles `Dew.Contents.dll` and `Dew.Core.dll` into ignored `data/extracted/managed-decompile`, then searches the output for Big Chomp and achievement-unlock metadata. It requires `dotnet` 8 or newer on PATH. The pinned ILSpy version is 9.1.0.7988 so the helper remains compatible with .NET 8 rather than requiring the current .NET 10-only ILSpy releases.
