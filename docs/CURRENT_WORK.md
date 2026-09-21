@@ -108,21 +108,17 @@ This is explicit negative evidence for the achievement path.
 
 ## Immediate next actions
 
-1. On Windows run `update-windows.cmd` and confirm the expanded unit suite passes.
-2. Rerun `tools\build-game-data-dictionary.cmd` after the CMD path fix.
-3. Capture the printed summary, especially:
-   - total Unity objects;
-   - normalized entity counts;
-   - skill/gem pool sizes by rarity;
-   - whether serialized LootManager rarity weights were found;
-   - Big Chomp acquisition rows and resolved content-eligible Ascension percentage.
-4. If LootManager rarity weights are not found in Addressables, add a targeted read-only player-data extraction for that manager/settings object; do not guess the constants.
-5. Add game-wide managed call-site tracing for `SelectSkillRarity`, `SelectSkillAndLevel`, `SelectGemRarity`, and `SelectGemAndQuality` so every source that invokes normal/high loot rolls can be mapped into the SQLite acquisition tables.
-6. Normalize achievement, Hero-loadout, and profile unlock mappings, then implement a player-facing profile resolver that derives each player's `available_items` from recognizable progression facts.
-7. Scaffold the PySide6 desktop viewer around the shared query/rate layer, including an Odds Calculator with Exact/Reference/Partial/Unknown status.
-8. Add a separate web/API build path over the same read-only release database and odds semantics.
-9. Expand source-specific acquisition extraction to shops, monsters/bosses, rooms, shrines, artifacts, Way of Stars, and other gameplay families.
-10. Preserve Big Chomp as the regression case: normal loot probability 0; Legendary Ascension probability `1 / N_unique_runtime`.
+1. On Windows run `update-windows.cmd`.
+2. Run `tools\locate-lootmanager-rarity-values.cmd`.
+3. Upload its five JSONL outputs.
+4. Identify the serialized file/object that owns the LootManager rarity tables.
+5. Extract and normalize exact normal/high skill and gem rarity probabilities; do not guess defaults.
+6. Rebuild the SQLite dictionary and verify `rarity_weights` is populated and ordinary Common/Rare/Epic/Legendary item odds resolve numerically.
+7. Add game-wide managed call-site tracing for `SelectSkillRarity`, `SelectSkillAndLevel`, `SelectGemRarity`, and `SelectGemAndQuality` so GUI options can be tied to the exact source conditions that select normal vs High rarity tables.
+8. Normalize achievement, Hero-loadout, and profile unlock mappings, then implement a player-facing profile resolver that derives each player's `available_items` from recognizable progression facts.
+9. Scaffold the PySide6 desktop viewer around the shared query/rate layer, including an Odds Calculator with Exact/Reference/Partial/Unknown status.
+10. Add a separate web/API build path over the same read-only release database and odds semantics.
+11. Expand source-specific acquisition extraction to shops, monsters/bosses, rooms, shrines, artifacts, Way of Stars, and other gameplay families.
 
 ## Recovery instruction for a new ChatGPT session
 
@@ -631,3 +627,70 @@ Odds display must distinguish:
 - release-wide Reference result;
 - Partial context;
 - unresolved/Unknown mechanic.
+
+
+## First game-wide SQLite build validated
+
+The first full `tools/build-game-data-dictionary.cmd` run completed successfully, and a repeat run produced the same counts.
+
+Release: `v1.4.0`
+
+Output:
+`data/normalized/shape-of-dreams-v1.4.0.sqlite`
+
+Observed counts:
+- Unity objects: 167,947
+- Raw JSON records: 10,758
+- Normalized entities: 9,176
+- Serialized skills/gems: 257
+- Pool members: 178
+- Acquisition rules: 1,079
+- Serialized rarity weights: 0
+
+Normalized entity counts:
+- game_object: 7,251
+- skill_ai: 667
+- status_effect: 613
+- skill: 154
+- gem: 104
+- achievement: 93
+- emote: 69
+- shrine: 64
+- accessory: 58
+- nametag: 54
+- skin: 40
+- hero: 9
+
+Content-eligible pools:
+- gem Common 16
+- gem Rare 37
+- gem Epic 27
+- gem Legendary 12
+- gem Unique 4
+- skill Common 20
+- skill Rare 24
+- skill Epic 21
+- skill Legendary 10
+- skill Unique 7
+
+Big Chomp reference results:
+- normal skill loot (normal): 0%
+- normal skill loot (high): 0%
+- Legendary -> Unique Ascension: 1/7 = 14.285714% using the full release content-eligible Unique skill pool.
+
+The build notes correctly warn that the live runtime pool can be smaller because it is based on participating players' available items minus lobby bans.
+
+### Remaining rate blocker
+
+`Serialized rarity weights: 0` means the Addressables-only analysis did not contain a readable `LootManager` instance with:
+- `skillRarityChance`
+- `skillRarityChanceHigh`
+- `gemRarityChance`
+- `gemRarityChanceHigh`
+
+The decompiled managed class confirms these are serialized instance fields, so their values must come from a serialized manager object rather than code constants.
+
+Added:
+`tools/locate-lootmanager-rarity-values.cmd`
+
+This scans the player data for the manager/type and four rarity-table field names so the exact serialized source can be identified before adding a parser.
