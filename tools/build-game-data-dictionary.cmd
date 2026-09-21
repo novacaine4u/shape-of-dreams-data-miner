@@ -22,28 +22,28 @@ echo Release: %RELEASE%
 echo Output: %OUTPUT%
 echo.
 
-if not exist "%UDT%" (
-    call tools\install-unitydatatool.cmd
-    if errorlevel 1 exit /b 1
-)
+if exist "%UDT%" goto :udt_ready
+call tools\install-unitydatatool.cmd
+if errorlevel 1 exit /b 1
+:udt_ready
 
-if not exist "%SODMINER%" (
-    echo ERROR: sodminer virtual environment command is missing.
-    echo Run update-windows.cmd first.
-    exit /b 1
-)
+if exist "%SODMINER%" goto :sodminer_ready
+echo ERROR: sodminer virtual environment command is missing.
+echo Run update-windows.cmd first.
+exit /b 1
+:sodminer_ready
 
-if not exist "%BUNDLES%" (
-    echo ERROR: Addressables bundle directory not found:
-    echo   %BUNDLES%
-    exit /b 1
-)
+if exist "%BUNDLES%" goto :bundles_ready
+echo ERROR: Addressables bundle directory not found:
+echo   %BUNDLES%
+exit /b 1
+:bundles_ready
 
-if not exist "%RAWDATA%" (
-    echo ERROR: RawData directory not found:
-    echo   %RAWDATA%
-    exit /b 1
-)
+if exist "%RAWDATA%" goto :rawdata_ready
+echo ERROR: RawData directory not found:
+echo   %RAWDATA%
+exit /b 1
+:rawdata_ready
 
 if not exist "%CD%\data\extracted" mkdir "%CD%\data\extracted"
 if not exist "%CD%\data\normalized" mkdir "%CD%\data\normalized"
