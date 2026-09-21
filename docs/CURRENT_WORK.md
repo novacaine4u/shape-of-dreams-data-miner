@@ -108,7 +108,10 @@ This is explicit negative evidence for the achievement path.
 
 ## Immediate next actions
 
-The existing serialized inspector has been upgraded to enumerate Big Chomp's attached components through UnityDataTool's analyzer database.
+The serialized inspector now also performs the two final proof checks:
+
+- targeted ILSpy decompile of the `Rarity` enum from `Dew.Core.dll`, so serialized value `10` can be mapped explicitly;
+- incoming-reference tracing for the two `St_U_BigChomp` GameObjects and all attached components, including property paths and source object/script information where available, to detect any Hero-loadout reference.
 
 Next:
 
@@ -116,18 +119,17 @@ Next:
 2. Rerun `tools\inspect-big-chomp-serialized.cmd`.
 3. Upload:
    - `data\extracted\big-chomp-serialized\summary.txt`
-4. The summary should now list every component attached to both `St_U_BigChomp` GameObjects and focused field hits from their dumps.
-5. Record the actual serialized values for:
-   - `rarity`;
-   - `isCharacterSkill`;
-   - `excludeFromPool`.
-6. If those values are Unique / false / false, record Ascension of a Legendary memory as an explicit acquisition path because:
-   - NotDiscovered is available in-game;
-   - the skill is admitted to `unlockedGameItems`;
-   - LootManager admits it to `poolSkillsByRarity[Unique]`;
-   - Shrine_Ascension explicitly rolls Legendary -> Unique;
-   - Shrine_Ascension calls `DiscoverSkill` on the resulting skill.
-7. If a field still does not appear, use the listed component object id/type to dump only that exact component with a minimal fallback.
+4. Confirm the `Rarity` enum mapping for value `10`.
+5. Review incoming references for any HeroSkill/loadout property pointing at Big Chomp.
+6. If `10 == Rarity.Unique` and there is no Hero-loadout reference, close the acquisition chain:
+   - Big Chomp begins `NotDiscovered`, not achievement-locked;
+   - `NotDiscovered` counts as available in game;
+   - `excludeFromPool == false`;
+   - `isCharacterSkill == false` because rarity is not Character;
+   - Big Chomp enters `poolSkillsByRarity[Unique]`;
+   - normal rarity rolls never choose Unique;
+   - Shrine_Ascension explicitly maps Legendary -> Unique and selects from that pool;
+   - receiving the result calls `DiscoverSkill`, permanently completing discovery.
 
 ## Recovery instruction for a new ChatGPT session
 
