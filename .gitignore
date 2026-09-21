@@ -13,3 +13,8 @@ data/normalized/
 releases/*/raw/
 *.log
 *.tmp
+
+
+# Local .NET build artifacts
+tools/MetadataTrace/bin/
+tools/MetadataTrace/obj/
