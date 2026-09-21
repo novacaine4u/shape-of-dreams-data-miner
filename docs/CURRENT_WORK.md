@@ -108,33 +108,12 @@ This is explicit negative evidence for the achievement path.
 
 ## Immediate next actions
 
-A targeted caller helper is now committed:
-
-`tools/decompile-discover-skill-callers.cmd`
-
-It decompiles only:
-
-- `AchievementManager`
-- `DewSave`
-- `Shrine_Ascension`
-
-and writes output under:
-
-`data/extracted/discover-skill-callers-decompiled/`
-
-Next:
-
-1. On Windows, run `update-windows.cmd`.
-2. Run `tools\decompile-discover-skill-callers.cmd`.
-3. Upload:
-   - `data\extracted\discover-skill-callers-decompiled\AchievementManager.cs`
-   - `data\extracted\discover-skill-callers-decompiled\DewSave.cs`
-   - `data\extracted\discover-skill-callers-decompiled\Shrine_Ascension.cs`
-   - `data\extracted\discover-skill-callers-decompiled\discover-skill-caller-context.txt`
-4. Determine which caller paths are generic and whether `Shrine_Ascension` carries content-specific acquisition logic.
-5. If the shrine passes the skill name dynamically, trace the source of that argument and check for `St_U_BigChomp` / Starless Path context.
-6. Separately verify whether `St_U_BigChomp` belongs to `Dew.allHeroSkills` / a Hero loadout.
-7. Preserve the final acquisition path as explicit evidence.
+1. Target-decompile `LootManager` and `Dew`.
+2. Inspect construction of `poolSkillsByRarity`, especially filters involving `rarity`, `IExcludeFromPool`, `excludeFromPool`, Hero skills, identity skills, and build inclusion.
+3. Inspect construction of `Dew.allSkills` and `Dew.allHeroSkills`.
+4. Determine whether code alone is sufficient to prove `St_U_BigChomp` pool eligibility.
+5. If the remaining unknown is serialized instance data (rarity or `excludeFromPool`), add a read-only resource/asset inspection step for the `St_U_BigChomp` resource rather than inferring defaults.
+6. Preserve the final pool-eligibility result as explicit evidence.
 
 ## Recovery instruction for a new ChatGPT session
 
@@ -226,3 +205,44 @@ Interpretation:
 - `Shrine_Ascension` has a special content-specific discovery path and is currently the strongest lead for a non-generic Big Chomp acquisition mechanic.
 
 The next step is to target-decompile `AchievementManager`, `DewSave`, and `Shrine_Ascension` and inspect only the relevant caller methods.
+
+
+## DiscoverSkill caller decompile result
+
+The targeted caller decompile established the four direct discovery paths:
+
+### Generic gameplay discovery
+
+`AchievementManager.ClientHeroEventOnSkillPickup(SkillTrigger obj)`
+- calls `DewSave.profileMain.DiscoverSkill(obj.GetType().Name)`;
+- therefore picking up a previously `NotDiscovered` skill permanently discovers it.
+
+`AchievementManager.Dismantled(Hero hero, NetworkBehaviour item)`
+- if the local player's dismantled item is a `SkillTrigger`, calls `DiscoverSkill(item.GetType().Name)`;
+- therefore dismantling a previously `NotDiscovered` skill also permanently discovers it.
+
+### Development/build-only path
+
+`DewSave.CreateProfile`
+- calls `DiscoverSkill` over all `NotDiscovered` skills only when the active build has `BuildFeatureTag.UnlockEverything`;
+- this is not the normal player acquisition path.
+
+### Content-specific path
+
+`Shrine_Ascension.OnActivateEditSkill`
+- computes the next rarity;
+- selects a random skill name from `LootManager.poolSkillsByRarity[nextRarity]`;
+- creates and equips that skill;
+- calls `RpcShowNotice(player, fromType, toType, level)`.
+
+For the local player, `Shrine_Ascension.UserCode_RpcShowNotice...` then calls `DiscoverSkill(toType)` whenever the result name begins with `St_`.
+
+Therefore the Ascension shrine is a confirmed mechanism capable of discovering a skill produced from the next-rarity skill pool.
+
+Remaining proof needed for Big Chomp specifically:
+
+1. determine the actual rarity of `St_U_BigChomp`;
+2. determine whether `St_U_BigChomp` is included in `LootManager.poolSkillsByRarity` or excluded by pool filters;
+3. verify whether it is a Hero/identity/character skill (which would alter profile-state handling).
+
+If Big Chomp is a non-hero Unique skill admitted to the Unique pool, then ascending a Legendary memory at an Ascension shrine is a direct in-game obtain/discovery path.
