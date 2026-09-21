@@ -366,3 +366,28 @@ The inspector:
 6. reports focused lines containing `St_U_BigChomp`, `rarity`, `excludeFromPool`, or `isCharacterSkill`.
 
 UnityDataTool is read-only for these operations; game files are not modified.
+
+
+## UnityDataTool v2.2.0 installer URL fix
+
+The first run of `tools/inspect-big-chomp-serialized.cmd` failed during the local UnityDataTool install with HTTP 404.
+
+Root cause:
+- the repository path was incorrectly written as `Unity-Technologies/UnityDataTool` instead of `Unity-Technologies/UnityDataTools`;
+- v2.2.0 predates the stable release-asset naming introduced in v2.2.1, so its Windows zip is named:
+  `v2.2.0-UnityDataTool-windows-x64-release.zip`.
+
+The exact official v2.2.0 Windows asset is now pinned to:
+
+`https://github.com/Unity-Technologies/UnityDataTools/releases/download/v2.2.0/v2.2.0-UnityDataTool-windows-x64-release.zip`
+
+Expected SHA-256:
+
+`0454a2c9db06d15f33ceb2f5b0a9c305353fb225db8afae24fefbba7e7b68997`
+
+The installer now verifies that SHA-256 before extraction.
+
+Next action remains:
+1. run `update-windows.cmd`;
+2. rerun `tools\inspect-big-chomp-serialized.cmd`;
+3. upload `data\extracted\big-chomp-serialized\summary.txt`.
