@@ -108,21 +108,19 @@ This is explicit negative evidence for the achievement path.
 
 ## Immediate next actions
 
-The original Big Chomp acquisition question is now closed with explicit code + serialized-data evidence.
-
-Next project work should shift from one-off Big Chomp investigation to reusable miner capability:
-
-1. Preserve the Big Chomp case as a worked example/regression fixture in project documentation.
-2. Generalize the current ad-hoc managed/serialized tracing helpers into reusable CLI/reporting commands where practical.
-3. Add a provenance-aware "how is this skill obtained?" report that can combine:
-   - profile unlock state;
-   - achievement mappings;
-   - Hero loadout membership;
-   - runtime loot-pool eligibility;
-   - rarity;
-   - special acquisition mechanisms such as Ascension;
-   - discovery call sites.
-4. Keep Big Chomp as the first end-to-end validation target for that generalized pipeline.
+1. On Windows run `update-windows.cmd` and confirm the expanded unit suite passes.
+2. Run `tools\build-game-data-dictionary.cmd`.
+3. Capture the printed summary, especially:
+   - total Unity objects;
+   - normalized entity counts;
+   - skill/gem pool sizes by rarity;
+   - whether serialized LootManager rarity weights were found;
+   - Big Chomp acquisition rows and resolved content-eligible Ascension percentage.
+4. If LootManager rarity weights are not found in Addressables, add a targeted read-only player-data extraction for that manager/settings object; do not guess the constants.
+5. Add game-wide managed call-site tracing for `SelectSkillRarity`, `SelectSkillAndLevel`, `SelectGemRarity`, and `SelectGemAndQuality` so every source that invokes normal/high loot rolls can be mapped into the SQLite acquisition tables.
+6. Add achievement and Hero-loadout mappings to normalized relationships and use them to build canonical fresh-profile/runtime-eligible pool snapshots.
+7. Expand source-specific acquisition extraction to shops, monsters/bosses, rooms, shrines, artifacts, Way of Stars, and other gameplay families.
+8. Preserve Big Chomp as the regression case: normal loot probability 0; Legendary Ascension probability `1 / N_unique_runtime`.
 
 ## Recovery instruction for a new ChatGPT session
 
@@ -494,3 +492,73 @@ Combined evidence now supports this acquisition path:
 Conclusion: **Big Chomp can be obtained/discovered by using a Shrine of Ascension on a Legendary memory and rolling Big Chomp from the eligible Unique skill pool.** The final selection is random among eligible Unique skills available from the players' combined unlocked-game-item set.
 
 Generic pickup/dismantle discovery still applies if Big Chomp is obtained through any other runtime source, but the Ascension shrine is the explicit code path identified for promoting Legendary -> Unique.
+
+
+## Game-wide SQLite dictionary phase
+
+The project has moved from the completed Big Chomp one-off investigation into a reusable release-wide data dictionary and drop-rate pipeline.
+
+New core modules:
+
+- `src/sodminer/database.py`
+  - provenance-aware SQLite schema;
+  - raw Unity object inventory;
+  - raw JSON records;
+  - normalized entities/attributes/relationships;
+  - pools and pool membership;
+  - rarity weights;
+  - acquisition methods/rules;
+  - query views.
+
+- `src/sodminer/drop_rates.py`
+  - explicit rarity enum mapping;
+  - normal-loot model;
+  - Ascension next-rarity model;
+  - uniform/contextual pool formulas.
+
+- `src/sodminer/catalog.py`
+  - RawData ingestion;
+  - complete UnityDataTool `object_view` inventory import;
+  - named gameplay entity normalization;
+  - automatic `St_*` / `Gem_*` component dumping;
+  - rarity/exclude/tags extraction;
+  - pool construction;
+  - acquisition-rule generation;
+  - LootManager normal/high rarity-weight extraction when the serialized manager is present in analyzed bundles.
+
+CLI:
+- `sodminer catalog-build`
+
+One-command Windows build:
+- `tools/build-game-data-dictionary.cmd`
+
+Validation summary:
+- `tools/print-dictionary-summary.py`
+
+Documentation:
+- `docs/DATA_DICTIONARY.md`
+
+Tests added:
+- `tests/test_drop_rates.py`
+- `tests/test_catalog.py`
+- `tests/test_database.py`
+
+### Drop-rate semantics
+
+Do not store one misleading universal percentage when the game mechanic is context-dependent.
+
+Normal skill/gem roll:
+`P(item) = P(rarity) / N_runtime_eligible_of_rarity`
+
+`LootManager.SelectRarity` explicitly rolls Legendary/Epic/Rare thresholds; Common is residual:
+`1 - legendary - epic - rare`.
+
+Normal rarity selection never produces Unique.
+
+Shrine of Ascension skill:
+`P(item | input rarity) = 1 / N_runtime_eligible_target_rarity`
+
+For Big Chomp:
+`P(Big Chomp | ascend Legendary memory) = 1 / N_runtime_eligible_Unique_skills`.
+
+The static dictionary also computes content-eligible pool counts as a reproducible reference denominator, while preserving notes that live player unlocks and lobby bans can reduce the runtime denominator.
