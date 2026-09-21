@@ -201,19 +201,30 @@ SELECT
     ar.formula_text,
     p.pool_key AS denominator_pool,
     ps.member_count AS denominator_count,
+    rw.weight AS rarity_weight,
     CASE
         WHEN ar.probability_kind = 'uniform_pool'
              AND ps.member_count > 0
         THEN 1.0 / ps.member_count
+        WHEN ar.probability_kind = 'rarity_then_uniform_pool'
+             AND rw.weight IS NOT NULL
+             AND ps.member_count > 0
+        THEN rw.weight / ps.member_count
         ELSE ar.probability_value
     END AS resolved_probability,
+    p.context_kind AS denominator_context,
     ar.notes
 FROM acquisition_rules ar
 JOIN releases r ON r.id = ar.release_id
 LEFT JOIN entities e ON e.id = ar.entity_id
 JOIN acquisition_methods m ON m.id = ar.method_id
 LEFT JOIN pools p ON p.id = ar.denominator_pool_id
-LEFT JOIN v_pool_sizes ps ON ps.pool_id = ar.denominator_pool_id;
+LEFT JOIN v_pool_sizes ps ON ps.pool_id = ar.denominator_pool_id
+LEFT JOIN rarity_weights rw
+    ON rw.release_id = ar.release_id
+    AND rw.family = m.family
+    AND rw.context_key = ar.context_key
+    AND rw.rarity_name = p.rarity_name;
 """
 
 
