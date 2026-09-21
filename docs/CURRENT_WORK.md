@@ -108,26 +108,19 @@ This is explicit negative evidence for the achievement path.
 
 ## Immediate next actions
 
-A targeted helper is now committed:
-
-`tools/decompile-skill-pool.cmd`
-
-It decompiles only `LootManager` and `Dew` from `Dew.Core.dll` and writes:
-
-- `data/extracted/skill-pool-decompiled/LootManager.cs`
-- `data/extracted/skill-pool-decompiled/Dew.cs`
-- `data/extracted/skill-pool-decompiled/skill-pool-trace.txt`
-
-Next:
-
-1. On Windows, run `update-windows.cmd`.
-2. Run `tools\decompile-skill-pool.cmd`.
-3. Upload the three files above.
-4. Inspect construction of `poolSkillsByRarity`, especially filters involving `rarity`, `IExcludeFromPool`, `excludeFromPool`, Hero skills, identity skills, and build inclusion.
-5. Inspect construction of `Dew.allSkills` and `Dew.allHeroSkills`.
-6. Determine whether code alone is sufficient to prove `St_U_BigChomp` pool eligibility.
-7. If the remaining unknown is serialized instance data (rarity or `excludeFromPool`), add a read-only resource/asset inspection step for the `St_U_BigChomp` resource rather than inferring defaults.
-8. Preserve the final pool-eligibility result as explicit evidence.
+1. Target-decompile `DewPlayer`.
+2. Inspect:
+   - `unlockedGameItems`;
+   - `GetLocalUnlockedGameItems()`;
+   - any code that builds/synchronizes that list from `DewProfile.skills` / `UnlockData.status`.
+3. Determine whether `UnlockStatus.NotDiscovered` skills are considered available for runtime loot pools.
+4. Separately obtain Big Chomp's serialized instance fields:
+   - `rarity`;
+   - `isCharacterSkill`;
+   - `excludeFromPool`.
+5. Prefer a read-only resource/asset inspection of the `St_U_BigChomp` prefab/resource; do not infer serialized values from class defaults.
+6. If Big Chomp is a non-character, non-excluded Unique skill and `NotDiscovered` skills are present in `unlockedGameItems`, record Ascension of a Legendary memory as an explicit acquisition path.
+7. Preserve any other spawn/drop path discovered while tracing these fields.
 
 ## Recovery instruction for a new ChatGPT session
 
@@ -260,3 +253,31 @@ Remaining proof needed for Big Chomp specifically:
 3. verify whether it is a Hero/identity/character skill (which would alter profile-state handling).
 
 If Big Chomp is a non-hero Unique skill admitted to the Unique pool, then ascending a Legendary memory at an Ascension shrine is a direct in-game obtain/discovery path.
+
+
+## LootManager pool eligibility constraint
+
+Targeted decompilation of `LootManager` and `Dew` established how runtime skill pools are built.
+
+`LootManager.OnStartServer()`:
+- unions each human player's `unlockedGameItems` into a set;
+- removes banned game items;
+- if the set is empty, falls back to `DewPlayer.GetLocalUnlockedGameItems()`;
+- passes that list to `AddToPool`.
+
+A skill enters `poolSkills` / `poolSkillsByRarity` only when all of these are true:
+
+1. the resource resolves to a `SkillTrigger`;
+2. `Dew.IsSkillIncludedInGame(skillType)` is true;
+3. `skillTrigger.isCharacterSkill == false`;
+4. `skillTrigger.excludeFromPool == false`.
+
+The pool bucket is then selected directly from `skillTrigger.rarity`.
+
+Therefore Big Chomp's Ascension eligibility is not proven merely by being a `SkillTrigger`. We must still establish:
+- whether a profile with Big Chomp at `NotDiscovered` includes it in `unlockedGameItems` / `GetLocalUnlockedGameItems()`;
+- Big Chomp's serialized `rarity`;
+- Big Chomp's serialized `isCharacterSkill`;
+- Big Chomp's serialized `excludeFromPool`.
+
+`Dew.allSkills` contains all non-abstract `SkillTrigger` subclasses. `Dew.allHeroSkills` is separately populated from each included Hero's Q/R/Identity loadout skills.
