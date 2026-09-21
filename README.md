@@ -21,15 +21,31 @@ Early foundation. The read-only scanner, normalized evidence model, installation
 
 ## Quick start
 
+On Windows, update/deploy/test the checkout in one command:
+
+    update-windows.cmd
+
+Manual install:
+
     python -m pip install -e .
 
-    sodminer inspect "C:/Program Files (x86)/Steam/steamapps/common/Shape of Dreams" --output inspection.json
+Inspect the game installation:
+
+    sodminer inspect "C:/Program Files (x86)/Steam/steamapps/common/Shape of Dreams" --output data/extracted/v1.4.0-inspection.json
+
+Search structured JSON for an internal ID or display name:
+
+    sodminer json-search "C:/Program Files (x86)/Steam/steamapps/common/Shape of Dreams/RawData" "St_U_BigChomp" --exact --output data/extracted/v1.4.0-big-chomp-json-refs.jsonl
+
+Extract raw strings when structured JSON is insufficient:
 
     sodminer strings "C:/Program Files (x86)/Steam/steamapps/common/Shape of Dreams" --release v1.4.0 --contains "Big Chomp" --output data/extracted/v1.4.0-big-chomp-strings.jsonl
 
+Create a release manifest:
+
     sodminer scan "C:/Program Files (x86)/Steam/steamapps/common/Shape of Dreams" --release v1.4.0
 
-The inspect, strings, and scan commands treat the game installation as read-only. String extraction can also target a single file when a narrower probe is preferable.
+The inspect, json-search, strings, and scan commands treat the game installation as read-only.
 
 ## Evidence model
 
