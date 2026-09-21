@@ -108,19 +108,20 @@ This is explicit negative evidence for the achievement path.
 
 ## Immediate next actions
 
-1. Target-decompile `DewPlayer`.
-2. Inspect:
-   - `unlockedGameItems`;
-   - `GetLocalUnlockedGameItems()`;
-   - any code that builds/synchronizes that list from `DewProfile.skills` / `UnlockData.status`.
-3. Determine whether `UnlockStatus.NotDiscovered` skills are considered available for runtime loot pools.
-4. Separately obtain Big Chomp's serialized instance fields:
+1. Locate which serialized Unity asset/resource file contains `St_U_BigChomp`.
+2. Use raw-string provenance first so the candidate file/path is explicit and reproducible.
+3. Inspect that serialized object read-only and extract:
    - `rarity`;
    - `isCharacterSkill`;
    - `excludeFromPool`.
-5. Prefer a read-only resource/asset inspection of the `St_U_BigChomp` prefab/resource; do not infer serialized values from class defaults.
-6. If Big Chomp is a non-character, non-excluded Unique skill and `NotDiscovered` skills are present in `unlockedGameItems`, record Ascension of a Legendary memory as an explicit acquisition path.
-7. Preserve any other spawn/drop path discovered while tracing these fields.
+4. Do not infer these values from the `St_U_` naming convention or class defaults.
+5. If the values are Unique / false / false, record Ascension of a Legendary memory as an explicit acquisition path because:
+   - NotDiscovered is available in-game;
+   - the skill is admitted to `unlockedGameItems`;
+   - LootManager admits it to `poolSkillsByRarity[Unique]`;
+   - Shrine_Ascension explicitly rolls Legendary -> Unique;
+   - Shrine_Ascension calls `DiscoverSkill` on the resulting skill.
+6. Preserve any other spawn/drop path discovered while inspecting the resource.
 
 ## Recovery instruction for a new ChatGPT session
 
@@ -292,3 +293,31 @@ Therefore ordinary `SelectSkillRarity()`-based loot generation does not directly
 `Shrine_Ascension.GetNextRarity()` explicitly maps Legendary -> Unique and then indexes `poolSkillsByRarity[Unique]`.
 
 This makes Ascension a structurally special path to Unique skills. If `St_U_BigChomp` is confirmed as an eligible Unique pool member, Ascension is a strong candidate for its intended discovery path.
+
+
+## NotDiscovered pool availability proven
+
+Targeted `DewPlayer` decompilation plus the previously decompiled `DewProfile.UnlockData` closes the profile-state gate.
+
+`DewProfile.UnlockData.isAvailableInGame` is explicitly:
+
+`status != UnlockStatus.Locked`
+
+Therefore both `UnlockStatus.NotDiscovered` and `UnlockStatus.Complete` are considered available in-game.
+
+`DewPlayer.GetLocalUnlockedGameItems()` iterates `DewSave.profileMain.skills` and adds a skill when:
+
+1. `skill.Value.isAvailableInGame` is true;
+2. `Dew.IsSkillIncludedInGame(skill.Key)` is true;
+3. the resource resolves;
+4. `excludeFromPool == false`;
+5. `isCharacterSkill == false`.
+
+This proves a non-achievement, non-hero skill that has been moved from `Locked` to `NotDiscovered` can already be sent to `DewPlayer.unlockedGameItems` before it has ever been discovered.
+
+For Big Chomp, the remaining unknowns are now strictly serialized resource values:
+- `rarity`
+- `excludeFromPool`
+- `isCharacterSkill`
+
+The RawData override for `St_U_BigChomp` does not override those fields, and the managed class itself is empty, so those values must be obtained from the serialized Unity resource/prefab rather than inferred.
