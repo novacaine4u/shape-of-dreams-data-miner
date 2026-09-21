@@ -108,12 +108,26 @@ This is explicit negative evidence for the achievement path.
 
 ## Immediate next actions
 
-1. Target-decompile `LootManager` and `Dew`.
-2. Inspect construction of `poolSkillsByRarity`, especially filters involving `rarity`, `IExcludeFromPool`, `excludeFromPool`, Hero skills, identity skills, and build inclusion.
-3. Inspect construction of `Dew.allSkills` and `Dew.allHeroSkills`.
-4. Determine whether code alone is sufficient to prove `St_U_BigChomp` pool eligibility.
-5. If the remaining unknown is serialized instance data (rarity or `excludeFromPool`), add a read-only resource/asset inspection step for the `St_U_BigChomp` resource rather than inferring defaults.
-6. Preserve the final pool-eligibility result as explicit evidence.
+A targeted helper is now committed:
+
+`tools/decompile-skill-pool.cmd`
+
+It decompiles only `LootManager` and `Dew` from `Dew.Core.dll` and writes:
+
+- `data/extracted/skill-pool-decompiled/LootManager.cs`
+- `data/extracted/skill-pool-decompiled/Dew.cs`
+- `data/extracted/skill-pool-decompiled/skill-pool-trace.txt`
+
+Next:
+
+1. On Windows, run `update-windows.cmd`.
+2. Run `tools\decompile-skill-pool.cmd`.
+3. Upload the three files above.
+4. Inspect construction of `poolSkillsByRarity`, especially filters involving `rarity`, `IExcludeFromPool`, `excludeFromPool`, Hero skills, identity skills, and build inclusion.
+5. Inspect construction of `Dew.allSkills` and `Dew.allHeroSkills`.
+6. Determine whether code alone is sufficient to prove `St_U_BigChomp` pool eligibility.
+7. If the remaining unknown is serialized instance data (rarity or `excludeFromPool`), add a read-only resource/asset inspection step for the `St_U_BigChomp` resource rather than inferring defaults.
+8. Preserve the final pool-eligibility result as explicit evidence.
 
 ## Recovery instruction for a new ChatGPT session
 
