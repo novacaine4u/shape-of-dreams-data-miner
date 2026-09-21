@@ -18,3 +18,6 @@ releases/*/raw/
 # Local .NET build artifacts
 tools/MetadataTrace/bin/
 tools/MetadataTrace/obj/
+
+tools/MethodCallTrace/bin/
+tools/MethodCallTrace/obj/
