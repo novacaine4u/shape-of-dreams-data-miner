@@ -266,10 +266,127 @@ def analyze_big_chomp_components(
                     )
 
             report.append("")
+
+        target_ids = []
+        target_rows = connection.execute(
+            """
+            SELECT id, object_id, type, name, game_object, serialized_file
+            FROM object_view
+            WHERE (type = 'GameObject' AND name = ?)
+               OR game_object IN (
+                    SELECT id FROM object_view
+                    WHERE type = 'GameObject' AND name = ?
+               )
+            ORDER BY id
+            """,
+            (TERM, TERM),
+        ).fetchall()
+        target_ids = [row["id"] for row in target_rows]
+
+        report.append("=== Incoming references to Big Chomp objects ===")
+        if not target_ids:
+            report.append("No target analyzer ids found.")
+        else:
+            placeholders = ",".join("?" for _ in target_ids)
+            ref_rows = connection.execute(
+                f"""
+                SELECT
+                    rv.object AS source_id,
+                    rv.referenced_object AS target_id,
+                    rv.property_path,
+                    rv.property_type,
+                    ov.object_id AS source_object_id,
+                    ov.type AS source_type,
+                    ov.name AS source_name,
+                    ov.game_object AS source_game_object,
+                    ov.serialized_file AS source_serialized_file
+                FROM refs_view rv
+                JOIN object_view ov ON ov.id = rv.object
+                WHERE rv.referenced_object IN ({placeholders})
+                ORDER BY rv.referenced_object, ov.type, ov.object_id, rv.property_path
+                """,
+                target_ids,
+            ).fetchall()
+
+            report.append(f"Incoming reference count: {len(ref_rows)}")
+            for row in ref_rows:
+                script_info = ""
+                try:
+                    sr = connection.execute(
+                        "SELECT * FROM script_object_view WHERE id = ?",
+                        (row["source_id"],),
+                    ).fetchone()
+                    if sr is not None:
+                        values = []
+                        for key in sr.keys():
+                            value = sr[key]
+                            if value not in (None, "") and key not in {
+                                "id", "object_id", "size", "crc32", "game_object"
+                            }:
+                                values.append(f"{key}={value}")
+                        if values:
+                            script_info = " [" + ", ".join(values) + "]"
+                except sqlite3.DatabaseError:
+                    pass
+
+                report.append(
+                    "REF "
+                    f"source_id={row['source_id']} "
+                    f"source_object_id={row['source_object_id']} "
+                    f"source_type={row['source_type']} "
+                    f"source_name={row['source_name']!r} "
+                    f"source_file={row['source_serialized_file']} "
+                    f"property={row['property_path']} "
+                    f"property_type={row['property_type']} "
+                    f"target_id={row['target_id']}"
+                    f"{script_info}"
+                )
+        report.append("")
     finally:
         connection.close()
 
     return dump_paths
+
+
+def append_rarity_enum_trace(game_root: Path, out_dir: Path, report: list[str]) -> None:
+    report.append("=== Rarity enum trace ===")
+    assembly = game_root / "Shape of Dreams_Data" / "Managed" / "Dew.Core.dll"
+    if not assembly.exists():
+        report.append(f"Missing: {assembly}")
+        report.append("")
+        return
+
+    repo_root = Path(__file__).resolve().parents[1]
+    restore = run(
+        ["dotnet", "tool", "restore", "--configfile", str(repo_root / "NuGet.config")],
+        stdout_path=out_dir / "ilspy-tool-restore.txt",
+    )
+    if restore.returncode != 0:
+        report.append("ILSpy tool restore failed; see ilspy-tool-restore logs.")
+        report.append("")
+        return
+
+    rarity_path = out_dir / "Rarity.cs"
+    result = run(
+        ["dotnet", "tool", "run", "ilspycmd", "-t", "Rarity", str(assembly)],
+        stdout_path=rarity_path,
+    )
+    if result.returncode != 0:
+        report.append("Rarity decompile failed; see Rarity.cs stderr log.")
+        report.append("")
+        return
+
+    enum_lines = []
+    for line in result.stdout.splitlines():
+        stripped = line.strip()
+        if any(name in stripped for name in (
+            "Common", "Rare", "Epic", "Legendary", "Character", "Identity", "Unique"
+        )):
+            enum_lines.append(stripped)
+
+    for line in enum_lines:
+        report.append(f"  {line}")
+    report.append("")
 
 
 def append_focused_hits(dump_paths: list[Path], report: list[str]) -> int:
@@ -336,6 +453,7 @@ def main() -> int:
         report.append(f"Missing: {bundle}")
 
     append_focused_hits(dump_paths, report)
+    append_rarity_enum_trace(game_root, out_dir, report)
     report.append(
         "Needed final fields: rarity, excludeFromPool, isCharacterSkill for St_U_BigChomp."
     )
