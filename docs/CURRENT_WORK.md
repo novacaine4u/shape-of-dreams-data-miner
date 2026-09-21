@@ -68,28 +68,32 @@ This is a decompiler failure, not evidence that the DLL itself is invalid.
 
 ## Active implementation
 
-Avoid whole-project decompilation and add a .NET 8 metadata scanner that reads `Dew.Contents.dll` directly.
+The .NET 8 metadata-scanner fallback is now implemented and committed:
 
-The scanner should:
+- `tools/MetadataTrace/MetadataTrace.csproj`
+- `tools/MetadataTrace/Program.cs`
+- `tools/trace-big-chomp-unlock.cmd`
 
-1. enumerate custom attributes;
-2. identify attributes whose constructor type is `AchUnlockOnComplete`;
-3. identify the owning class;
-4. inspect the raw custom-attribute blob for `St_U_BigChomp`;
-5. print any owning achievement class whose attribute targets Big Chomp.
+The scanner avoids method decompilation entirely. It:
 
-This avoids decompiling method bodies entirely.
+1. enumerates managed custom attributes;
+2. resolves attributes whose constructor type contains `AchUnlockOnComplete`;
+3. identifies the owning metadata type;
+4. inspects the raw custom-attribute blob for `St_U_BigChomp`;
+5. prints any owner whose attribute targets Big Chomp.
+
+The CMD wrapper builds the scanner with .NET 8 and scans `Dew.Contents.dll`, writing:
+
+`data/extracted/managed-metadata/big-chomp-achievement-attributes.txt`
 
 ## Immediate next actions
 
-1. Add `tools/MetadataTrace/MetadataTrace.csproj`.
-2. Add `tools/MetadataTrace/Program.cs`.
-3. Add a CMD wrapper or integrate the metadata scan into `tools\decompile-managed.cmd`.
-4. Commit those changes.
-5. Run `update-windows.cmd` on Windows.
-6. Run the metadata trace against `Dew.Contents.dll`.
-7. If a class maps to `St_U_BigChomp`, inspect/decompile only that class and record the relationship as explicit evidence.
-8. If no achievement attribute targets Big Chomp, inspect Hero-based unlock relationships and `DewProfile.skills` initialization next.
+1. On Windows, run `update-windows.cmd`.
+2. Run `tools\trace-big-chomp-unlock.cmd`.
+3. Upload or inspect `data\extracted\managed-metadata\big-chomp-achievement-attributes.txt`.
+4. If a class maps to `St_U_BigChomp`, inspect/decompile only that class and record the relationship as explicit evidence.
+5. If no achievement attribute targets Big Chomp, extend the metadata trace to Hero-based unlock relationships and `DewProfile.skills` initialization.
+6. Keep whole-project ILSpy decompilation as a secondary/fallback technique only; it currently fails on unrelated method `Shrine_MorasDomain_HerPresence.SpawnRewards`.
 
 ## Recovery instruction for a new ChatGPT session
 
