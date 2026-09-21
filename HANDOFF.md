@@ -69,6 +69,69 @@ Modding/API research established several important documented leads:
 
 Immediate next action: run `sodminer inspect` against the current Shape of Dreams installation and preserve that report, then run `sodminer strings` filtered for `Big Chomp`. Use the observed layout and raw hits to choose the parser/extraction path, then trace Big Chomp through resource IDs, dependencies, localization, and unlock references.
 
+
+
+## Live Windows validation and Big Chomp discovery — 2026-09-21
+
+Windows development checkout:
+
+    C:\GitHub\shape-of-dreams-data-miner
+
+Validated interpreter:
+
+    Python 3.12.10
+
+A one-command Windows updater/deployer now exists at repository root:
+
+    update-windows.cmd
+
+It refuses to overwrite a dirty working tree, fetches and fast-forwards `main`, creates a Python 3.12 `.venv` if needed, installs the checkout editable, runs the full test suite, and prints the deployed commit.
+
+The Unity-version regex bug discovered during the first Windows test run was fixed. Before the structured JSON search work, all 7 then-existing tests passed on Windows.
+
+Live inspection of the installed game at:
+
+    C:\Program Files (x86)\Steam\steamapps\common\Shape of Dreams
+
+established:
+
+- Unity version: `6000.0.77f1`
+- scripting backend: Mono
+- managed assemblies: 241
+- `Assembly-CSharp.dll`, `Dew.Core.dll`, `Dew.Contents.dll`, and other managed game assemblies are directly available
+- no IL2CPP indicators were found
+- `RawData` exists
+- `RawData/!ModResources/overrides` exists
+- `Mods/ModTemplate` exists
+- the inspection found 2,168 likely structured data files, heavily dominated by JSON override data
+
+Direct search of `RawData/en-US/memories.json` established the first Big Chomp acceptance-test facts:
+
+- old Chomp internal ID: `St_R_Chomp`
+- Big Chomp internal ID: `St_U_BigChomp`
+- display name: `Big Chomp`
+- image: `St_U_BigChomp.png`
+
+This is explicit game-data evidence. Do not conflate `St_R_Chomp` with `St_U_BigChomp`.
+
+A new dependency-free command is being added for structured tracing:
+
+    sodminer json-search <file-or-directory> <term> [--exact] [--case-sensitive] [--output <jsonl>]
+
+It recursively searches JSON keys and string values and preserves:
+
+- source file
+- JSON path
+- match kind (key or value)
+- matched text
+- containing top-level object key
+
+Immediate next action after updating the Windows checkout:
+
+    sodminer json-search "C:\Program Files (x86)\Steam\steamapps\common\Shape of Dreams\RawData" "St_U_BigChomp" --exact --output data\extracted\v1.4.0-big-chomp-json-refs.jsonl
+
+Then inspect every returned top-level object, especially references in progression, stars, achievements, quests, profile/unlock data, or Starless Path content. Only move into managed assembly decompilation or Unity asset parsing if the structured JSON does not encode the unlock relationship.
+
 ## Existing implemented components
 
 src/sodminer/models.py
