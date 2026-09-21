@@ -83,3 +83,28 @@ It inventories:
 - likely structured data files
 
 The next parser decision should be made only after a real current-release inspection report is available.
+
+
+## Achievement-driven unlocks
+
+The current API documentation adds a stronger documented unlock mechanism:
+
+- `DewProfile.skills` contains all skills in the game and maps each key to `DewProfile.UnlockData`.
+- `DewProfile.UnlockData` contains an `UnlockStatus status` field plus `didReadMemory` and `isNewHeroOrHeroSkill`.
+- `UnlockStatus.Locked` is documented as "Locked by associated Achievement or Hero."
+- `AchUnlockOnComplete` is a class-level attribute with constructor `AchUnlockOnComplete(Type targetType)` and a `targetType` property.
+
+Implication: for a locked memory such as Big Chomp, achievement class metadata is a high-value source of explicit unlock relationships. A class decorated with `[AchUnlockOnComplete(typeof(St_U_BigChomp))]` or equivalent would be direct evidence that the achievement unlocks Big Chomp. This relationship may exist only in managed assembly metadata and therefore may not appear in RawData JSON.
+
+## Big Chomp live structured-data result
+
+The v1.4.0 RawData trace established:
+
+- Big Chomp internal ID: `St_U_BigChomp`
+- runtime ability-instance ID: `Ai_U_BigChomp`
+- `St_U_BigChomp.json` contains cast/cooldown/level-up configuration only
+- `Ai_U_BigChomp.json` contains runtime effect values (damage, healing, shield, boss multiplier, cooldown reduction, etc.) only
+- a broad `BigChomp` structured JSON search returned only the two override targets plus localized memory/image references
+- no stars, achievements, quests, or other RawData JSON contained a direct Big Chomp reference
+
+Therefore the unlock investigation should now prioritize managed assembly metadata/code, especially achievement classes and profile initialization logic.
