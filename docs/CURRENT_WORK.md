@@ -109,7 +109,7 @@ This is explicit negative evidence for the achievement path.
 ## Immediate next actions
 
 1. On Windows run `update-windows.cmd` and confirm the expanded unit suite passes.
-2. Run `tools\build-game-data-dictionary.cmd`.
+2. Rerun `tools\build-game-data-dictionary.cmd` after the CMD path fix.
 3. Capture the printed summary, especially:
    - total Unity objects;
    - normalized entity counts;
@@ -118,9 +118,11 @@ This is explicit negative evidence for the achievement path.
    - Big Chomp acquisition rows and resolved content-eligible Ascension percentage.
 4. If LootManager rarity weights are not found in Addressables, add a targeted read-only player-data extraction for that manager/settings object; do not guess the constants.
 5. Add game-wide managed call-site tracing for `SelectSkillRarity`, `SelectSkillAndLevel`, `SelectGemRarity`, and `SelectGemAndQuality` so every source that invokes normal/high loot rolls can be mapped into the SQLite acquisition tables.
-6. Add achievement and Hero-loadout mappings to normalized relationships and use them to build canonical fresh-profile/runtime-eligible pool snapshots.
-7. Expand source-specific acquisition extraction to shops, monsters/bosses, rooms, shrines, artifacts, Way of Stars, and other gameplay families.
-8. Preserve Big Chomp as the regression case: normal loot probability 0; Legendary Ascension probability `1 / N_unique_runtime`.
+6. Normalize achievement, Hero-loadout, and profile unlock mappings, then implement a player-facing profile resolver that derives each player's `available_items` from recognizable progression facts.
+7. Scaffold the PySide6 desktop viewer around the shared query/rate layer, including an Odds Calculator with Exact/Reference/Partial/Unknown status.
+8. Add a separate web/API build path over the same read-only release database and odds semantics.
+9. Expand source-specific acquisition extraction to shops, monsters/bosses, rooms, shrines, artifacts, Way of Stars, and other gameplay families.
+10. Preserve Big Chomp as the regression case: normal loot probability 0; Legendary Ascension probability `1 / N_unique_runtime`.
 
 ## Recovery instruction for a new ChatGPT session
 
@@ -591,3 +593,41 @@ Next action remains:
 1. run `update-windows.cmd`;
 2. rerun `tools\build-game-data-dictionary.cmd`;
 3. capture the printed dictionary summary.
+
+
+## Context-aware GUI rate engine
+
+User requirement: if player/game options affect drop rates, the GUI and website must collect those options and calculate personal odds rather than show only static reference percentages.
+
+Implemented shared calculation layer:
+
+- `src/sodminer/rate_context.py`
+  - `PlayerPoolContext`
+  - `RateContext`
+  - `OddsResult`
+  - runtime pool resolution from party union minus bans;
+  - normal skill/gem odds using rarity weight / runtime pool size;
+  - Ascension memory odds using uniform next-rarity runtime pool;
+  - Ascension essence odds excluding already-owned essence types.
+
+Tests:
+- `tests/test_rate_context.py`
+
+Architecture:
+- `docs/GUI_AND_WEB.md`
+
+Desktop and web must share this same rate engine/semantics.
+
+Known proven runtime/context variables currently represented:
+- participating players' available item contributions;
+- banned items;
+- normal vs High rarity context;
+- active Hero's already-owned essence types for essence Ascension.
+
+Player-facing GUI should not normally ask users to manually specify internal `available_items`. Once achievement/Hero/profile unlock mappings are normalized, a profile resolver should derive that set from recognizable progression inputs.
+
+Odds display must distinguish:
+- Exact personal result;
+- release-wide Reference result;
+- Partial context;
+- unresolved/Unknown mechanic.
